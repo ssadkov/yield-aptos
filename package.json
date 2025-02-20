@@ -1,0 +1,29 @@
+{
+  "name": "nexty",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@aptos-labs/ts-sdk": "^1.35.0",
+    "@polkadot/util-crypto": "^13.4.3",
+    "move-agent-kit": "^0.1.3",
+    "next": "15.1.7",
+    "node-fetch": "^3.3.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "swagger-ui-express": "^5.0.1",
+    "swagger-ui-react": "^5.19.0"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "eslint": "^9",
+    "eslint-config-next": "15.1.7",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1"
+  }
+}

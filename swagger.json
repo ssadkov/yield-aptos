@@ -1,0 +1,323 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Yield-A API",
+    "version": "1.0.0",
+    "description": "Documentation API"
+  },
+  "paths": {
+    "/api/hello": {
+      "get": {
+        "summary": "Hello test API",
+        "responses": {
+          "200": {
+            "description": "Success response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "message": "Hello World!"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/aptos/checkBalance": {
+      "get": {
+        "summary": "Check Aptos wallet balance",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns wallet balance",
+            "content": {
+              "application/json": {
+                "example": {
+                  "address": "0x123...",
+                  "balance": "100.5"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/aptos/createWallet": {
+      "get": {
+        "summary": "Generate a new Aptos wallet",
+        "responses": {
+          "200": {
+            "description": "Returns wallet details",
+            "content": {
+              "application/json": {
+                "example": {
+                  "mnemonic": "word1 word2 word3 ...",
+                  "address": "0xabc...",
+                  "privateKeyHex": "0x123..."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/joule/pools": {
+      "get": {
+        "summary": "Retrieve the list of Joule pools",
+        "parameters": [
+          {
+            "name": "asset",
+            "in": "query",
+            "description": "Filter by asset (e.g., 'BTC' will return WBTC, sBTC, etc.)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of pools",
+            "content": {
+              "application/json": {
+                "example": [
+                  {
+                    "asset": {
+                      "assetName": "WBTC",
+                      "displayName": "Wrapped BTC"
+                    },
+                    "depositApy": "3.45%",
+                    "extraAPY": {
+                      "depositAPY": "0.5%",
+                      "stakingAPY": "1.2%"
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/joule/userPositions": {
+      "get": {
+        "summary": "Retrieve user positions in Joule",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "query",
+            "description": "User wallet address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User positions",
+            "content": {
+              "application/json": {
+                "example": [
+                  {
+                    "positionId": "1234",
+                    "assets": [
+                      { "asset": "0x1::aptos_coin::AptosCoin", "amount": "1000" },
+                      { "asset": "0xf22bede2::asset::USDT", "amount": "500" }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/joule/lend": {
+      "post": {
+        "summary": "Lend tokens to a Joule pool",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "privateKeyHex": {
+                    "type": "string",
+                    "example": "0xabcdef..."
+                  },
+                  "token": {
+                    "type": "string",
+                    "example": "0x357b0b74bc833e95a115ad22604854d6b0fca151cecd94111770e5d6ffc9dc2b::asset::USDT"
+                  },
+                  "amount": {
+                    "type": "number",
+                    "example": 10
+                  },
+                  "positionId": {
+                    "type": "string",
+                    "example": "1234"
+                  }
+                },
+                "required": ["privateKeyHex", "token", "amount"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Returns transaction hash",
+            "content": {
+              "application/json": {
+                "example": {
+                  "transactionHash": "0xabc..."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/joule/withdraw": {
+      "post": {
+        "summary": "Withdraw tokens from a Joule pool",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "privateKeyHex": {
+                    "type": "string",
+                    "example": "0xabcdef..."
+                  },
+                  "token": {
+                    "type": "string",
+                    "example": "0x357b0b74bc833e95a115ad22604854d6b0fca151cecd94111770e5d6ffc9dc2b::asset::USDT"
+                  },
+                  "amount": {
+                    "type": "number",
+                    "example": 10
+                  },
+                  "positionId": {
+                    "type": "string",
+                    "example": "1234"
+                  }
+                },
+                "required": ["privateKeyHex", "token", "amount"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Returns transaction hash",
+            "content": {
+              "application/json": {
+                "example": {
+                  "transactionHash": "0xabc..."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "example": { "error": "Missing required parameters" }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "example": { "error": "Failed to process withdraw" }
+              }
+            }
+          }
+        }
+      }
+    },
+	"/api/aptos/transfer": {
+  "post": {
+    "summary": "Transfer tokens on Aptos blockchain",
+    "description": "Transfers APT or a specified token to a recipient address.",
+    "requestBody": {
+      "required": true,
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "privateKey": {
+                "type": "string",
+                "description": "Sender's private key",
+                "example": "0xabcdef..."
+              },
+              "receiver": {
+                "type": "string",
+                "description": "Recipient wallet address",
+                "example": "0x123..."
+              },
+              "amount": {
+                "type": "number",
+                "description": "Amount to transfer",
+                "example": 1.5
+              },
+              "token": {
+                "type": "string",
+                "description": "Token to transfer (default is Aptos)",
+                "example": "0x1::aptos_coin::AptosCoin",
+                "default": "0x1::aptos_coin::AptosCoin"
+              }
+            },
+            "required": ["privateKey", "receiver", "amount"]
+          }
+        }
+      }
+    },
+    "responses": {
+      "200": {
+        "description": "Transaction successful",
+        "content": {
+          "application/json": {
+            "example": {
+              "transactionHash": "0xabcdef123456..."
+            }
+          }
+        }
+      },
+      "400": {
+        "description": "Bad request - missing or invalid parameters",
+        "content": {
+          "application/json": {
+            "example": { "error": "Invalid input" }
+          }
+        }
+      },
+      "500": {
+        "description": "Server error",
+        "content": {
+          "application/json": {
+            "example": { "error": "Transaction failed" }
+          }
+        }
+      }
+    }
+  }
+}
+
+  }
+}
