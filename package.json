@@ -12,7 +12,7 @@
     "@ai-sdk/openai": "^1.1.13",
     "@ai-sdk/react": "^1.1.17",
     "@aptos-labs/ts-sdk": "^1.35.0",
-    "@aptos-labs/wallet-adapter-react": "^4.1.0",
+    "@aptos-labs/wallet-adapter-react": "^3.8.0",
     "@polkadot/util-crypto": "^13.4.3",
     "@radix-ui/react-slot": "^1.1.2",
     "ai": "^4.1.45",
