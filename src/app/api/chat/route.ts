@@ -11,34 +11,35 @@ export async function POST(req: Request) {
     model: openai('gpt-4o'),
     messages,
     tools: {
-      weather: tool({
-        description: 'Get the weather in a location (celsius)',
-        parameters: z.object({
-          location: z.string().describe('The location to get the weather for'),
-        }),
-        execute: async ({ location }) => {
-          const temperature = Math.round(Math.random() * (90 - 32) + 32);
-          return {
-            location,
-            temperature,
-          };
-        },
-      }),
-	  convertFahrenheitToCelsius: tool({
-        description: 'Convert a temperature in fahrenheit to celsius',
-        parameters: z.object({
-          temperature: z
-            .number()
-            .describe('The temperature in fahrenheit to convert'),
-        }),
-        execute: async ({ temperature }) => {
-          const celsius = Math.round((temperature - 32) * (5 / 9));
-          return {
-            celsius,
-          };
-        },
-      }),
+      createAptosWallet: tool({
+        description: 'Creates a new Aptos wallet using an API.',
+        parameters: z.object({}),
+        execute: async () => {
+          try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/aptos/createWallet`, {
+              method: 'GET',
+              headers: {
+                'Accept': 'application/json',
+              },
+            });
 
+            if (!response.ok) {
+              throw new Error('Failed to create Aptos wallet');
+            }
+
+            const walletData = await response.json();
+
+            // Ensure all necessary data is returned
+            return {
+              address: walletData.address,
+              privateKeyHex: walletData.privateKeyHex, // Corrected key name
+              mnemonic: walletData.mnemonic, // Added mnemonic
+            };
+          } catch (error) {
+            return { error: error.message };
+          }
+        },
+      }),
     },
   });
 
