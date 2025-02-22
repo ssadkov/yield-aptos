@@ -4,25 +4,32 @@ import { useChat } from '@ai-sdk/react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
+
+// Отключаем SSR для react-markdown
+const ReactMarkdown = dynamic(() => import('react-markdown'), { ssr: false });
 
 export default function Chat() {
   const { messages, input, handleInputChange, handleSubmit } = useChat({
-    maxSteps: 5, // Enables multi-step tool calls
+    maxSteps: 5,
   });
 
   const messagesEndRef = useRef(null);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900 p-4">
-      <Card className="w-full max-w-2xl shadow-lg bg-white dark:bg-gray-800">
+      <Card className="w-full max-w-3xl shadow-lg bg-white dark:bg-gray-800">
         <CardContent className="p-6 flex flex-col">
-          {/* Message Container */}
-          <div className="h-[500px] overflow-y-auto space-y-4 p-2 border border-gray-300 dark:border-gray-700 rounded-lg">
+
+          {/* Контейнер сообщений */}
+          <div className="h-[600px] md:h-[700px] overflow-y-auto space-y-4 p-2 border border-gray-300 dark:border-gray-700 rounded-lg">
             {messages.map((m, index) => (
               <div
                 key={index}
@@ -39,30 +46,50 @@ export default function Chat() {
                         🔧 {tool.toolName} was invoked
                       </p>
 
-                      {/* Проверяем, что API вернул ВСЕ три поля */}
-                      {tool.toolName === 'createAptosWallet' && tool.result?.address && tool.result?.privateKeyHex && tool.result?.mnemonic ? (
-                        <div className="mt-2">
-                          <p className="text-green-600 dark:text-green-400 font-bold">✅ New Aptos Wallet Created!</p>
-
-                          <p className="mt-1">
-                            🏦 <strong>Address:</strong>
-                            <code className="block bg-gray-200 dark:bg-gray-700 p-2 rounded text-xs break-all overflow-hidden">
-                              {tool.result.address}
-                            </code>
+                      {/* Вывод таблицы для getJoulePools */}
+                      {tool.toolName === 'getJoulePools' && tool.result?.table ? (
+                        <div className="mt-2 overflow-x-auto">
+                          <p className="text-green-600 dark:text-green-400 font-bold">
+                            ✅ Yield Pools for {tool.result.table[0]?.asset}
                           </p>
 
-                          <p className="mt-1">
-                            🔑 <strong>Private Key:</strong>
-                            <code className="block bg-gray-200 dark:bg-gray-700 p-2 rounded text-xs break-all overflow-hidden">
-                              {tool.result.privateKeyHex}
-                            </code>
-                          </p>
+                          <table className="w-full border-collapse border border-gray-400 dark:border-gray-600">
+                            <thead>
+                              <tr className="bg-gray-500 dark:bg-gray-700 text-white">
+                                <th className="border border-gray-400 p-2">Asset</th>
+                                <th className="border border-gray-400 p-2">Provider</th>
+                                <th className="border border-gray-400 p-2">Total APY</th>
+                                <th className="border border-gray-400 p-2">Deposit APY</th>
+                                <th className="border border-gray-400 p-2">Extra APY</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {tool.result.table.map((row, idx) => (
+                                <tr key={idx} className="bg-white dark:bg-gray-800">
+                                  <td className="border border-gray-400 p-2">{row.asset}</td>
+                                  <td className="border border-gray-400 p-2">{row.provider}</td>
+                                  <td className="border border-gray-400 p-2 font-bold">
+                                    {parseFloat(row.totalAPY).toFixed(2)}%
+                                  </td>
+                                  <td className="border border-gray-400 p-2">
+                                    {parseFloat(row.depositApy).toFixed(2)}%
+                                  </td>
+                                  <td className="border border-gray-400 p-2">
+                                    {parseFloat(row.extraAPY).toFixed(2)}%
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
 
-                          <p className="mt-1">
-                            🔐 <strong>Mnemonic:</strong>
-                            <code className="block bg-gray-200 dark:bg-gray-700 p-2 rounded text-xs break-words overflow-hidden">
-                              {tool.result.mnemonic}
-                            </code>
+                          <p className="mt-2 text-blue-600 dark:text-blue-400">
+                            <a
+                              href="https://app.joule.finance/market"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              🔗 More details on Joule Finance
+                            </a>
                           </p>
                         </div>
                       ) : (
@@ -71,20 +98,23 @@ export default function Chat() {
                     </div>
                   ))
                 ) : (
-                  <p>{m.content}</p>
+                  isMounted ? (
+                    <div dangerouslySetInnerHTML={{ __html: m.content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+                  ) : (
+                    <p>{m.content}</p>
+                  )
                 )}
               </div>
             ))}
             <div ref={messagesEndRef} />
           </div>
 
-
           {/* Input Form */}
           <form onSubmit={handleSubmit} className="flex gap-2 mt-4">
             <Input
               className="flex-1"
               value={input}
-              placeholder="Type a message or /create-wallet to generate an Aptos wallet"
+              placeholder="Type a message or ask for yield pools (e.g., 'Show USD pools')"
               onChange={handleInputChange}
             />
             <Button type="submit">Send</Button>
