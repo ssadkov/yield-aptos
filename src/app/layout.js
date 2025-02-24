@@ -3,7 +3,7 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { SessionProvider } from "next-auth/react";
-import Sidebar from "@/components/Sidebar"; // Создадим Sidebar
+import Sidebar from "@/components/Sidebar";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -18,10 +18,10 @@ const geistMono = Geist_Mono({
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased flex overflow-hidden`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased flex`}>
         <SessionProvider>
           <Sidebar />
-          <main className="flex-1 overflow-auto">{children}</main>
+          <main className="flex-1 overflow-auto min-h-screen md:ml-80">{children}</main>
         </SessionProvider>
       </body>
     </html>
