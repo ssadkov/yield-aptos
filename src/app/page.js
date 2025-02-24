@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useChat } from '@ai-sdk/react';
 import { Input } from '@/components/ui/input';
@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
+import GoogleLoginButton from "@/components/GoogleLoginButton";
 
 // Отключаем SSR для react-markdown
 const ReactMarkdown = dynamic(() => import('react-markdown'), { ssr: false });
@@ -27,7 +28,7 @@ export default function Chat() {
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900 p-4">
       <Card className="w-full max-w-3xl shadow-lg bg-white dark:bg-gray-800">
         <CardContent className="p-6 flex flex-col">
-
+      
           {/* Контейнер сообщений */}
           <div className="h-[600px] md:h-[700px] overflow-y-auto space-y-4 p-2 border border-gray-300 dark:border-gray-700 rounded-lg">
             {messages.map((m, index) => (
