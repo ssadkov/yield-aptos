@@ -52,7 +52,7 @@ export default function Chat() {
     const userBalance = balances.find((b) => b.asset === pool.asset)?.balance || "0";
   
     // Формируем строку с балансом
-    const newInput = `Supply ${pool.asset} (${pool.provider}) on Joule Finance with APY ${parseFloat(pool.totalAPY).toFixed(2)}% in the amount of ${userBalance}`;
+    const newInput = `Supply ${pool.asset} (${pool.provider}) on Joule Finance in the amount of ${userBalance}`;
   
     handleInputChange({ target: { value: newInput } });
   };
