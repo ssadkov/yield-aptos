@@ -2,16 +2,17 @@
 
 import { Button } from "@/components/ui/button";
 
-/**
- * Компонент таблицы пулов Joule
- * @param {Array} pools - Список пулов
- * @param {Array} balances - Балансы пользователя [{ asset: "...", balance: "..." }]
- * @param {Function} onSupplyClick - Функция для обработки клика по кнопке Supply
- */
-export default function PoolsTable({ pools, balances, onSupplyClick }) {
-  // Функция проверки наличия токена у пользователя
+export default function PoolsTable({ pools, balances, onSupplyClick, onBotMessage }) {
   const hasToken = (token) => balances.some((b) => b.asset === token && parseFloat(b.balance) > 0);
   const hasAnyBalance = balances.length > 0 && balances.some((b) => parseFloat(b.balance) > 0);
+
+  // 🔄 Обработчик кнопки "Swap and Supply"
+  const handleSwapAndSupplyClick = () => {
+    console.log("🔄 Simulating bot message for Swap and Supply...");
+    
+    // Отправляем в чат сообщение от бота
+    onBotMessage("🤖 To swap and supply, please ensure you have a wallet ready. More details coming soon!");
+  };
 
   return (
     <div className="mt-2 overflow-x-auto w-full">
@@ -47,7 +48,12 @@ export default function PoolsTable({ pools, balances, onSupplyClick }) {
                     Supply
                   </Button>
                 ) : hasAnyBalance ? (
-                  <Button className="bg-yellow-500 text-white px-4 py-1 rounded">Swap and Supply</Button>
+                  <Button 
+                    className="bg-yellow-500 text-white px-4 py-1 rounded"
+                    onClick={handleSwapAndSupplyClick} // ✅ Теперь отправляем сообщение от бота
+                  >
+                    Swap and Supply
+                  </Button>
                 ) : (
                   <Button className="bg-red-500 text-white px-4 py-1 rounded">Top up wallet</Button>
                 )}

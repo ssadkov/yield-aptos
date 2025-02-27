@@ -30,40 +30,40 @@ export default function Sidebar() {
         .then((data) => {
           if (data.address) {
             setAptosAddress(data.address);
-            localStorage.setItem("aptosWalletAddress", data.address); // ✅ Сохраняем адрес в localStorage
-            fetchBalances(data.address); // Загружаем балансы при старте
+            localStorage.setItem("aptosWalletAddress", data.address); // ✅ Save address in localStorage
+            fetchBalances(data.address); // Load balances on start
           } else {
-            console.error("Ошибка API:", data.error);
+            console.error("API Error:", data.error);
           }
         })
-        .catch((err) => console.error("Ошибка запроса:", err));
+        .catch((err) => console.error("Request error:", err));
     }
   }, [session]);
 
-  // Функция запроса балансов
+  // Function to fetch balances
   const fetchBalances = async (address) => {
     setLoading(true);
     try {
-      console.log(`🔄 Обновляем балансы для ${address}`);
+      console.log(`🔄 Updating balances for ${address}`);
       const res = await fetch(`/api/aptos/balances?address=${address}`);
       const data = await res.json();
       setBalances(data.balances || []);
-      toast.success("Балансы обновлены!");
+      toast.success("Balances updated!");
     } catch (error) {
-      console.error("❌ Ошибка обновления балансов:", error);
-      toast.error("Ошибка загрузки балансов");
+      console.error("❌ Balance update error:", error);
+      toast.error("Error loading balances");
     } finally {
       setLoading(false);
     }
   };
 
-  // Функция для копирования адреса
+  // Function to copy address
   const copyToClipboard = () => {
     navigator.clipboard.writeText(aptosAddress);
     toast.success("Aptos Address copied!");
   };
 
-  // Форматируем адрес
+  // Format address
   const formatAddress = (address) => (address ? `${address.slice(0, 10)}...${address.slice(-10)}` : "Loading...");
 
   return (
@@ -71,7 +71,7 @@ export default function Sidebar() {
       <Toaster position="top-right" reverseOrder={false} />
       {isOpen && <div className="fixed inset-0 bg-black opacity-50 z-40 md:hidden" onClick={() => setIsOpen(false)}></div>}
 
-      {/* Бургер-кнопка */}
+      {/* Burger button */}
       <button onClick={() => setIsOpen(!isOpen)} className="fixed top-4 left-4 z-50 p-2 rounded-md bg-gray-800 text-white shadow md:hidden flex items-center">
         {isOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
@@ -87,7 +87,7 @@ export default function Sidebar() {
               <div className="w-full text-center">
                 <p className="text-sm mb-2">{session.user.email}</p>
 
-                {/* Aptos-адрес */}
+                {/* Aptos Address */}
                 <div className="flex items-center justify-between w-full bg-gray-200 dark:bg-gray-700 p-3 rounded-lg mt-4">
                   <span className="truncate text-sm">{formatAddress(aptosAddress)}</span>
                   <button onClick={copyToClipboard} className="ml-3 p-2 rounded-lg bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500 transition">
@@ -95,7 +95,7 @@ export default function Sidebar() {
                   </button>
                 </div>
 
-                {/* Балансы */}
+                {/* Balances */}
                 <div className="w-full mt-4 text-sm text-gray-900 dark:text-gray-300">
                   <div className="flex justify-between items-center">
                     <h3 className="text-lg font-semibold">Balances</h3>
@@ -128,7 +128,7 @@ export default function Sidebar() {
                   )}
                 </div>
 
-                {/* Кнопка для отображения мнемоники */}
+                {/* Show Mnemonic Button */}
                 <Button className="w-full mt-4 bg-gray-300 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-400 dark:hover:bg-gray-600 transition"
                   onClick={() => toast(`Mnemonic: ${mnemonic}`, { duration: 5000 })}>
                   Show Mnemonic

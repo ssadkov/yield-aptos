@@ -1,18 +1,20 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
+import { appendResponseMessages } from "ai"
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useEffect, useRef, useState } from "react";
 import PoolsTable from "@/components/PoolsTable";
+import { nanoid } from "nanoid"; // ✅ Генерация уникальных ID
 import dynamic from "next/dynamic";
 
 // Отключаем SSR для react-markdown
 const ReactMarkdown = dynamic(() => import("react-markdown"), { ssr: false });
 
 export default function Chat() {
-  const { messages, input, handleInputChange, handleSubmit } = useChat({
+  const { messages, input, handleInputChange, handleSubmit, append, setMessages } = useChat({
     maxSteps: 5,
   });
 
@@ -21,39 +23,61 @@ export default function Chat() {
   const [balances, setBalances] = useState([]);
   const [userAddress, setUserAddress] = useState("");
 
+  
+
   useEffect(() => {
     setIsMounted(true);
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   // Получаем адрес кошелька из localStorage (его туда сохраняет Sidebar)
+  // useEffect(() => {
+  //   const storedAddress = localStorage.getItem("aptosWalletAddress");
+  //   if (storedAddress) {
+  //     setUserAddress(storedAddress);
+  //     fetchBalances(storedAddress);
+  //   }
+  // }, []);
+
   useEffect(() => {
-    const storedAddress = localStorage.getItem("aptosWalletAddress");
-    if (storedAddress) {
-      setUserAddress(storedAddress);
-      fetchBalances(storedAddress);
+    if (typeof window !== "undefined") {
+      const storedAddress = localStorage.getItem("aptosWalletAddress");
+      if (storedAddress) {
+        setUserAddress(storedAddress);
+        fetchBalances(storedAddress);
+      }
     }
   }, []);
+  
 
   // Функция запроса балансов из API
   const fetchBalances = async (address) => {
     try {
-      console.log(`🔄 Загружаем балансы для ${address}`);
+      console.log(`🔄 Fetching balances for ${address}`);
       const res = await fetch(`/api/aptos/balances?address=${address}`);
       const data = await res.json();
       setBalances(data.balances || []);
     } catch (error) {
-      console.error("❌ Ошибка загрузки балансов:", error);
+      console.error("❌ Error fetching balances:", error);
     }
   };
 
+  // Функция для добавления сообщения от бота в чат
+  const handleBotMessage = (message) => {
+    setMessages((prevMessages) => [
+      ...prevMessages,
+      {
+        id: nanoid(),
+        role: "assistant",
+        content: message,
+      },
+    ]);
+  };
+  
+
   const handleSupplyClick = (pool) => {
-    // Находим баланс пользователя для выбранного актива
     const userBalance = balances.find((b) => b.asset === pool.asset)?.balance || "0";
-  
-    // Формируем строку с балансом
     const newInput = `Supply ${pool.asset} (${pool.provider}) on Joule Finance in the amount of ${userBalance}`;
-  
     handleInputChange({ target: { value: newInput } });
   };
 
@@ -83,7 +107,12 @@ export default function Chat() {
                           🔧 {tool.toolName} was invoked
                         </p>
                         {tool.toolName === "getJoulePools" && tool.result?.table ? (
-                          <PoolsTable pools={tool.result.table} balances={balances} onSupplyClick={handleSupplyClick} />
+                          <PoolsTable 
+                            pools={tool.result.table} 
+                            balances={balances} 
+                            onSupplyClick={handleSupplyClick} 
+                            onBotMessage={handleBotMessage} // ✅ Передаем функцию для отправки сообщений от бота
+                          />
                         ) : (
                           <pre className="whitespace-pre-wrap break-words overflow-x-auto w-full">
                             {JSON.stringify(tool.result, null, 2)}
