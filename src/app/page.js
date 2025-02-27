@@ -47,6 +47,16 @@ export default function Chat() {
     }
   };
 
+  const handleSupplyClick = (pool) => {
+    // Находим баланс пользователя для выбранного актива
+    const userBalance = balances.find((b) => b.asset === pool.asset)?.balance || "0";
+  
+    // Формируем строку с балансом
+    const newInput = `Supply ${pool.asset} (${pool.provider}) on Joule Finance with APY ${parseFloat(pool.totalAPY).toFixed(2)}% in the amount of ${userBalance}`;
+  
+    handleInputChange({ target: { value: newInput } });
+  };
+
   return (
     <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900">
       {/* Chat Container */}
@@ -60,23 +70,20 @@ export default function Chat() {
                   key={index}
                   className={`p-3 rounded-lg break-words ${
                     m.toolInvocations
-                      ? "bg-gray-300 dark:bg-gray-800 text-gray-900 dark:text-white max-w-full" // Операции - на всю ширину
+                      ? "bg-gray-300 dark:bg-gray-800 text-gray-900 dark:text-white max-w-full"
                       : m.role === "user"
-                      ? "bg-blue-500 text-white max-w-[75%] ml-auto" // Сообщения пользователя (справа, синие)
-                      : "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white max-w-[75%]" // Ответы AI (слева, серые)
+                      ? "bg-blue-500 text-white max-w-[75%] ml-auto"
+                      : "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white max-w-[75%]"
                   }`}
                 >
-                  {/* Операции (toolInvocations) */}
                   {m.toolInvocations ? (
                     m.toolInvocations.map((tool, i) => (
                       <div key={i} className="p-3 bg-gray-300 dark:bg-gray-800 rounded-lg">
                         <p className="text-gray-700 dark:text-gray-300 font-semibold flex items-center">
                           🔧 {tool.toolName} was invoked
                         </p>
-
-                        {/* Вывод таблицы пулов через PoolsTable */}
                         {tool.toolName === "getJoulePools" && tool.result?.table ? (
-                          <PoolsTable pools={tool.result.table} balances={balances} />
+                          <PoolsTable pools={tool.result.table} balances={balances} onSupplyClick={handleSupplyClick} />
                         ) : (
                           <pre className="whitespace-pre-wrap break-words overflow-x-auto w-full">
                             {JSON.stringify(tool.result, null, 2)}
@@ -85,32 +92,22 @@ export default function Chat() {
                       </div>
                     ))
                   ) : (
-                    isMounted ? (
-                      <div
-                        dangerouslySetInnerHTML={{
-                          __html: m.content.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>"),
-                        }}
-                      />
-                    ) : (
-                      <p>{m.content}</p>
-                    )
+                    <p>{m.content}</p>
                   )}
                 </div>
               ))}
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input Field (Fixed at Bottom) */}
+            {/* Input Field */}
             <form onSubmit={handleSubmit} className="flex gap-2 p-4 border-t">
               <Input
                 className="flex-1 p-2 border rounded-lg"
                 value={input}
-                placeholder="Type a message or ask for yield pools (e.g., 'Show USD pools')"
+                placeholder="Type a message or ask for yield pools"
                 onChange={handleInputChange}
               />
-              <Button type="submit" className="bg-black text-white">
-                Send
-              </Button>
+              <Button type="submit" className="bg-black text-white">Send</Button>
             </form>
           </CardContent>
         </Card>

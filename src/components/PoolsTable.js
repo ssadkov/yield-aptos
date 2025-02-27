@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
  * Компонент таблицы пулов Joule
  * @param {Array} pools - Список пулов
  * @param {Array} balances - Балансы пользователя [{ asset: "...", balance: "..." }]
+ * @param {Function} onSupplyClick - Функция для обработки клика по кнопке Supply
  */
-export default function PoolsTable({ pools, balances }) {
+export default function PoolsTable({ pools, balances, onSupplyClick }) {
   // Функция проверки наличия токена у пользователя
   const hasToken = (token) => balances.some((b) => b.asset === token && parseFloat(b.balance) > 0);
   const hasAnyBalance = balances.length > 0 && balances.some((b) => parseFloat(b.balance) > 0);
@@ -34,18 +35,17 @@ export default function PoolsTable({ pools, balances }) {
             <tr key={idx} className="bg-white dark:bg-gray-800">
               <td className="border border-gray-400 p-2">{row.asset}</td>
               <td className="border border-gray-400 p-2">{row.provider}</td>
-              <td className="border border-gray-400 p-2 font-bold">
-                {parseFloat(row.totalAPY).toFixed(2)}%
-              </td>
-              <td className="border border-gray-400 p-2">
-                {parseFloat(row.depositApy).toFixed(2)}%
-              </td>
-              <td className="border border-gray-400 p-2">
-                {parseFloat(row.extraAPY).toFixed(2)}%
-              </td>
+              <td className="border border-gray-400 p-2 font-bold">{parseFloat(row.totalAPY).toFixed(2)}%</td>
+              <td className="border border-gray-400 p-2">{parseFloat(row.depositApy).toFixed(2)}%</td>
+              <td className="border border-gray-400 p-2">{parseFloat(row.extraAPY).toFixed(2)}%</td>
               <td className="border border-gray-400 p-2">
                 {hasToken(row.asset) ? (
-                  <Button className="bg-green-500 text-white px-4 py-1 rounded">Supply</Button>
+                  <Button 
+                    className="bg-green-500 text-white px-4 py-1 rounded"
+                    onClick={() => onSupplyClick(row)}
+                  >
+                    Supply
+                  </Button>
                 ) : hasAnyBalance ? (
                   <Button className="bg-yellow-500 text-white px-4 py-1 rounded">Swap and Supply</Button>
                 ) : (
