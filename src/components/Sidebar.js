@@ -98,7 +98,12 @@ export default function Sidebar() {
                 <div className="w-full mt-4 text-sm text-gray-900 dark:text-gray-300">
                   <div className="flex justify-between items-center">
                     <h3 className="text-lg font-semibold">Balances</h3>
-                    <button onClick={() => fetchBalances(aptosAddress)} className={`p-1 rounded-md ${loading ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-300 dark:hover:bg-gray-600"} transition`}>
+                    <button
+                      onClick={() => fetchBalances(aptosAddress)}
+                      className={`p-1 rounded-md ${
+                        loading ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-300 dark:hover:bg-gray-600"
+                      } transition`}
+                    >
                       <RefreshCw size={20} />
                     </button>
                   </div>
@@ -107,7 +112,12 @@ export default function Sidebar() {
                     <ul className="mt-2 space-y-2">
                       {balances.map((b, index) => (
                         <li key={index} className="flex justify-between bg-gray-200 dark:bg-gray-700 p-2 rounded-md">
-                          <span>{b.asset}</span>
+                          <span>
+                            {b.asset}{" "}
+                            {b.provider && (
+                              <span className="text-xs text-gray-500 dark:text-gray-400">({b.provider})</span>
+                            )}
+                          </span>
                           <span className="font-bold">{b.balance}</span>
                         </li>
                       ))}
@@ -116,6 +126,7 @@ export default function Sidebar() {
                     <p className="mt-2 text-gray-500">No assets found</p>
                   )}
                 </div>
+
 
                 {/* Кнопка для отображения мнемоники */}
                 <Button className="w-full mt-4 bg-gray-300 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-400 dark:hover:bg-gray-600 transition"

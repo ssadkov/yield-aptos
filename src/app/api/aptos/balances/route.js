@@ -34,6 +34,7 @@ export async function GET(req) {
         balances.push({
           asset: token.assetName,
           provider: token.provider,
+          token: token.token,
           balance: balance,
         });
       }

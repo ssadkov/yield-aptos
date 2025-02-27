@@ -42,7 +42,7 @@ export async function POST(req: Request) {
       }),
 
       getJoulePools: tool({
-        description: 'Fetches the yield pools for a specific asset from Joule Finance.',
+        description: 'Fetches the yield farming pools (lending) for a specific asset from Joule Finance.',
         parameters: z.object({
           asset: z.string().describe('The asset name (e.g., USD, APT, BTC, ETH) to fetch yield pools for'),
         }),

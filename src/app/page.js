@@ -27,20 +27,22 @@ export default function Chat() {
     <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900">
       {/* Chat Container */}
       <div className="flex-1 flex flex-col items-center justify-center px-4">
-        <Card className="w-full max-w-3xl shadow-lg bg-white dark:bg-gray-800 flex flex-col h-[90vh]">
+        <Card className="w-full max-w-3xl shadow-lg bg-white dark:bg-gray-800 flex flex-col h-[calc(100vh-6rem)]">
           <CardContent className="p-6 flex flex-col flex-grow overflow-hidden">
             {/* Messages Container */}
             <div className="flex-1 overflow-y-auto space-y-4 p-4">
               {messages.map((m, index) => (
                 <div
                   key={index}
-                  className={`p-3 rounded-lg max-w-[75%] break-words ${
-                    m.role === "user"
-                      ? "bg-blue-500 text-white ml-auto"
-                      : "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white"
+                  className={`p-3 rounded-lg break-words ${
+                    m.toolInvocations
+                      ? "bg-gray-300 dark:bg-gray-800 text-gray-900 dark:text-white max-w-full" // Операции - на всю ширину
+                      : m.role === "user"
+                      ? "bg-blue-500 text-white max-w-[75%] ml-auto" // Сообщения пользователя (справа, синие)
+                      : "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white max-w-[75%]" // Ответы AI (слева, серые)
                   }`}
                 >
-                  {/* Рендер таблицы пулов */}
+                  {/* Операции (toolInvocations) */}
                   {m.toolInvocations ? (
                     m.toolInvocations.map((tool, i) => (
                       <div key={i} className="p-3 bg-gray-300 dark:bg-gray-800 rounded-lg">
@@ -48,8 +50,9 @@ export default function Chat() {
                           🔧 {tool.toolName} was invoked
                         </p>
 
+                        {/* Вывод таблицы для пулов */}
                         {tool.toolName === "getJoulePools" && tool.result?.table ? (
-                          <div className="mt-2 overflow-x-auto max-w-full">
+                          <div className="mt-2 overflow-x-auto w-full">
                             <p className="text-green-600 dark:text-green-400 font-bold">
                               ✅ Yield Pools for {tool.result.table[0]?.asset}
                             </p>
@@ -94,7 +97,7 @@ export default function Chat() {
                             </p>
                           </div>
                         ) : (
-                          <pre className="whitespace-pre-wrap break-words overflow-x-auto max-w-full">
+                          <pre className="whitespace-pre-wrap break-words overflow-x-auto w-full">
                             {JSON.stringify(tool.result, null, 2)}
                           </pre>
                         )}
