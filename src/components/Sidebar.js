@@ -30,6 +30,7 @@ export default function Sidebar() {
         .then((data) => {
           if (data.address) {
             setAptosAddress(data.address);
+            localStorage.setItem("aptosWalletAddress", data.address); // ✅ Сохраняем адрес в localStorage
             fetchBalances(data.address); // Загружаем балансы при старте
           } else {
             console.error("Ошибка API:", data.error);
@@ -126,7 +127,6 @@ export default function Sidebar() {
                     <p className="mt-2 text-gray-500">No assets found</p>
                   )}
                 </div>
-
 
                 {/* Кнопка для отображения мнемоники */}
                 <Button className="w-full mt-4 bg-gray-300 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-400 dark:hover:bg-gray-600 transition"

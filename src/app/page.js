@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useEffect, useRef, useState } from "react";
+import PoolsTable from "@/components/PoolsTable";
 import dynamic from "next/dynamic";
 
 // Отключаем SSR для react-markdown
@@ -17,11 +18,34 @@ export default function Chat() {
 
   const messagesEndRef = useRef(null);
   const [isMounted, setIsMounted] = useState(false);
+  const [balances, setBalances] = useState([]);
+  const [userAddress, setUserAddress] = useState("");
 
   useEffect(() => {
     setIsMounted(true);
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Получаем адрес кошелька из localStorage (его туда сохраняет Sidebar)
+  useEffect(() => {
+    const storedAddress = localStorage.getItem("aptosWalletAddress");
+    if (storedAddress) {
+      setUserAddress(storedAddress);
+      fetchBalances(storedAddress);
+    }
+  }, []);
+
+  // Функция запроса балансов из API
+  const fetchBalances = async (address) => {
+    try {
+      console.log(`🔄 Загружаем балансы для ${address}`);
+      const res = await fetch(`/api/aptos/balances?address=${address}`);
+      const data = await res.json();
+      setBalances(data.balances || []);
+    } catch (error) {
+      console.error("❌ Ошибка загрузки балансов:", error);
+    }
+  };
 
   return (
     <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900">
@@ -50,52 +74,9 @@ export default function Chat() {
                           🔧 {tool.toolName} was invoked
                         </p>
 
-                        {/* Вывод таблицы для пулов */}
+                        {/* Вывод таблицы пулов через PoolsTable */}
                         {tool.toolName === "getJoulePools" && tool.result?.table ? (
-                          <div className="mt-2 overflow-x-auto w-full">
-                            <p className="text-green-600 dark:text-green-400 font-bold">
-                              ✅ Yield Pools for {tool.result.table[0]?.asset}
-                            </p>
-
-                            <table className="w-full border-collapse border border-gray-400 dark:border-gray-600">
-                              <thead>
-                                <tr className="bg-gray-500 dark:bg-gray-700 text-white">
-                                  <th className="border border-gray-400 p-2">Asset</th>
-                                  <th className="border border-gray-400 p-2">Provider</th>
-                                  <th className="border border-gray-400 p-2">Total APY</th>
-                                  <th className="border border-gray-400 p-2">Deposit APY</th>
-                                  <th className="border border-gray-400 p-2">Extra APY</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {tool.result.table.map((row, idx) => (
-                                  <tr key={idx} className="bg-white dark:bg-gray-800">
-                                    <td className="border border-gray-400 p-2">{row.asset}</td>
-                                    <td className="border border-gray-400 p-2">{row.provider}</td>
-                                    <td className="border border-gray-400 p-2 font-bold">
-                                      {parseFloat(row.totalAPY).toFixed(2)}%
-                                    </td>
-                                    <td className="border border-gray-400 p-2">
-                                      {parseFloat(row.depositApy).toFixed(2)}%
-                                    </td>
-                                    <td className="border border-gray-400 p-2">
-                                      {parseFloat(row.extraAPY).toFixed(2)}%
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-
-                            <p className="mt-2 text-blue-600 dark:text-blue-400">
-                              <a
-                                href="https://app.joule.finance/market"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                              >
-                                🔗 More details on Joule Finance
-                              </a>
-                            </p>
-                          </div>
+                          <PoolsTable pools={tool.result.table} balances={balances} />
                         ) : (
                           <pre className="whitespace-pre-wrap break-words overflow-x-auto w-full">
                             {JSON.stringify(tool.result, null, 2)}
