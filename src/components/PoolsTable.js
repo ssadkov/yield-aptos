@@ -7,12 +7,53 @@ export default function PoolsTable({ pools, balances, onSupplyClick, onBotMessag
   const hasAnyBalance = balances.length > 0 && balances.some((b) => parseFloat(b.balance) > 0);
 
   // 🔄 Обработчик кнопки "Swap and Supply"
-  const handleSwapAndSupplyClick = () => {
-    console.log("🔄 Simulating bot message for Swap and Supply...");
-    
-    // Отправляем в чат сообщение от бота
-    onBotMessage("🤖 To swap and supply, please ensure you have a wallet ready. More details coming soon!");
+  const handleSwapAndSupplyClick = async () => {
+    console.log("🔄 Swap and Supply started...");
+  
+    // ✅ 1. Бот отправляет первое сообщение
+    onBotMessage("🤖 To swap and supply, please ensure you have a wallet ready. Creating an Aptos wallet now...");
+  
+    try {
+      // ✅ 2. Запрашиваем создание Aptos кошелька напрямую
+      const response = await fetch("/api/aptos/createWallet", {
+        method: "GET",
+        headers: { "Accept": "application/json" },
+      });
+  
+      const data = await response.json();
+      console.log("✅ CreateAptosWallet Response:", data);
+  
+      // ✅ 3. Отправляем в чат результат создания кошелька
+      if (data.error) {
+        onBotMessage(`❌ Error creating wallet: ${data.error}`);
+      } else {
+        onBotMessage(`✅ Wallet created!\n🔗 Address: ${data.address}`);
+      }
+    } catch (error) {
+      console.error("❌ Error creating wallet:", error);
+      onBotMessage("❌ Failed to create wallet. Please try again.");
+    }
   };
+
+  
+  const handleSupplyClick = (pool) => {
+    const userBalance = balances.find((b) => b.asset === pool.asset)?.balance || "0";
+    const newInput = `Supply ${pool.asset} (${pool.provider}) on Joule Finance in the amount of ${userBalance}`;
+    handleInputChange({ target: { value: newInput } });
+
+    // console.log("🔄 Supply clicked for:", pool);
+
+    //   // ✅ Добавляем серое сообщение в чат с формой ввода
+    //   onBotMessage({
+    //     type: "form", // Указываем, что это форма
+    //     content: `💰 Enter the amount to supply for ${pool.asset} (${pool.provider}):`,
+    //     pool,
+    //   });
+  };
+
+
+  
+  
 
   return (
     <div className="mt-2 overflow-x-auto w-full">

@@ -77,8 +77,18 @@ export default function Chat() {
 
   const handleSupplyClick = (pool) => {
     const userBalance = balances.find((b) => b.asset === pool.asset)?.balance || "0";
-    const newInput = `Supply ${pool.asset} (${pool.provider}) on Joule Finance in the amount of ${userBalance}`;
-    handleInputChange({ target: { value: newInput } });
+    // const newInput = `Supply ${pool.asset} (${pool.provider}) on Joule Finance in the amount of ${userBalance}`;
+    // handleInputChange({ target: { value: newInput } });
+
+    console.log("🔄 Supply clicked for:", pool);
+
+  // ✅ Добавляем серое сообщение в чат с формой ввода
+  onBotMessage({
+    type: "form", // Указываем, что это форма
+    content: `💰 Enter the amount to supply for ${pool.asset} (${pool.provider}):`,
+    pool,
+  });
+
   };
 
   return (
