@@ -8,15 +8,22 @@ export const maxDuration = 30;
 
 export async function POST(req: Request) {
   try {
-    const { messages, userBalances } = await req.json();
+    const body = await req.json();
+    
+    const { messages, email, userId } = body; // ✅ Здесь должны быть `email` и `userId`
 
-    console.log("🔹 Incoming chat request:", { messages, userBalances });
-    console.log("🔹 Full messages received:", JSON.stringify(messages, null, 2));
 
+    if (email && userId) {
+      console.log("✅ Extracted email:", email);
+      console.log("✅ Extracted userId:", userId);
+    } else {
+      console.warn("⚠️ Email or ID not found in extraBody!");
+    }
 
+  
     const result = streamText({
       model: openai("gpt-4o"),
-      messages,
+      messages, // ✅ messages больше не содержат email и userId
       tools: {
         createAptosWallet,
         getJoulePools,
@@ -30,6 +37,7 @@ export async function POST(req: Request) {
     return new Response(JSON.stringify({ error: error.message }), { status: 500 });
   }
 }
+
 
 
 // import { openai } from "@ai-sdk/openai";

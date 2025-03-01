@@ -14,84 +14,47 @@ import dynamic from "next/dynamic";
 const ReactMarkdown = dynamic(() => import("react-markdown"), { ssr: false });
 
 export default function Chat() {
-  const { messages, input, handleInputChange, handleSubmit, setMessages, append } = useChat({
+  const email = localStorage.getItem("userEmail");
+  const userId = localStorage.getItem("userId");
+
+  console.log("🔄 Sending extraBody:", { email, userId });
+
+
+  const { messages, input, handleInputChange, handleSubmit, append, setMessages } = useChat({
+    api: "/api/chat", // ✅ Указываем API-эндпоинт
     maxSteps: 5,
-    
   });
-
-
 
   const messagesEndRef = useRef(null);
   const [isMounted, setIsMounted] = useState(false);
-  const [balances, setBalances] = useState([]);
-  const [userAddress, setUserAddress] = useState("");
-
-  
 
   useEffect(() => {
     setIsMounted(true);
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const storedAddress = localStorage.getItem("aptosWalletAddress");
-      if (storedAddress) {
-        setUserAddress(storedAddress);
-        fetchBalances(storedAddress);
-      }
-    }
-  }, []);
+  const handleSubmitWithUserData = async (e) => {
+    e.preventDefault();
   
-
-  // Функция запроса балансов из API
-  const fetchBalances = async (address) => {
-    try {
-      console.log(`🔄 Fetching balances for ${address}`);
-      const res = await fetch(`/api/aptos/balances?address=${address}`);
-      const data = await res.json();
-      setBalances(data.balances || []);
-    } catch (error) {
-      console.error("❌ Error fetching balances:", error);
+    const email = localStorage.getItem("userEmail");
+    const userId = localStorage.getItem("userId");
+  
+    if (!email || !userId) {
+      alert("❌ User email or ID not found. Please log in.");
+      return;
     }
-  };
-
-  // Функция для добавления сообщения от бота в чат
-  const handleBotMessage = (message) => {
-    setMessages((prevMessages) => [
-      ...prevMessages,
-      {
-        id: nanoid(),
-        role: "assistant",
-        content: message,
-      },
-    ]);
+  
+    console.log("🔄 Sending user message with:", { email, userId, input });
+  
+    await append(
+      { role: "user", content: input }, // ✅ Оставляем только текст в `content`
+      { body: { email, userId } } // ✅ Передаем `email` и `userId` в `body`
+    );
+  
+    handleInputChange({ target: { value: "" } });
   };
   
 
-  
-const handleSubmitWithUserData = async (e) => {
-  e.preventDefault();
-
-  const email = localStorage.getItem("userEmail");
-  const id = localStorage.getItem("userId");
-
-  if (!email || !id) {
-    alert("❌ User email or ID not found. Please log in.");
-    return;
-  }
-
-  console.log("🔄 Sending user message with:", { email, id, input });
-
-  await append({
-    role: "user",
-    content: input,
-    parameters: { email, id }, // ✅ Теперь передаем email и id во все сообщения
-  });
-
-  handleInputChange({ target: { value: "" } });
-};
 
 
 
@@ -160,7 +123,7 @@ const handleSubmitWithUserData = async (e) => {
                       </div>
                     ))
                   ) : (
-                    <p><ReactMarkdown>{m.content}</ReactMarkdown></p>
+                    <p><ReactMarkdown components={{ p: "span" }}>{m.content}</ReactMarkdown></p>
                   )}
                 </div>
               ))}
