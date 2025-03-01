@@ -13,7 +13,7 @@ export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
   const [aptosAddress, setAptosAddress] = useState("");
   const [mnemonic, setMnemonic] = useState("");
-  const [balances, setBalances] = useState([]);
+  const [balances, setBalances] = useState([]); 
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -21,7 +21,6 @@ export default function Sidebar() {
       const generatedMnemonic = generateMnemonicForUser(session.user.email, session.user.id);
       localStorage.setItem("userEmail", session.user.email);
       localStorage.setItem("userId", session.user.id);
-
       setMnemonic(generatedMnemonic);
 
       fetch("/api/aptos/restoreWalletFromMnemonic", {
@@ -33,8 +32,8 @@ export default function Sidebar() {
         .then((data) => {
           if (data.address) {
             setAptosAddress(data.address);
-            localStorage.setItem("aptosWalletAddress", data.address); // ✅ Save address in localStorage
-            fetchBalances(data.address); // Load balances on start
+            localStorage.setItem("aptosWalletAddress", data.address); 
+            fetchBalances(data.address); // ✅ Баланс загружается сразу!
           } else {
             console.error("API Error:", data.error);
           }
@@ -43,8 +42,13 @@ export default function Sidebar() {
     }
   }, [session]);
 
-  // Function to fetch balances
-  const fetchBalances = async (address) => {
+  // ✅ Баланс загружается сразу и обновляется по кнопке
+  const fetchBalances = async (address = aptosAddress) => {
+    if (!address) {
+      toast.error("Wallet address not found!");
+      return;
+    }
+
     setLoading(true);
     try {
       console.log(`🔄 Updating balances for ${address}`);
@@ -103,7 +107,7 @@ export default function Sidebar() {
                   <div className="flex justify-between items-center">
                     <h3 className="text-lg font-semibold">Balances</h3>
                     <button
-                      onClick={() => fetchBalances(aptosAddress)}
+                      onClick={() => fetchBalances()} // ✅ Баланс обновляется ТОЛЬКО по кнопке
                       className={`p-1 rounded-md ${
                         loading ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-300 dark:hover:bg-gray-600"
                       } transition`}

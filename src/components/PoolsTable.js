@@ -52,7 +52,7 @@ export default function PoolsTable({ pools, balances, onSupplyClick, onBotMessag
   };
 
 
-  console.log(pools);
+  // console.log(pools);
   
 
   return (

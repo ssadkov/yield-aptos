@@ -12,19 +12,24 @@ export async function POST(req: Request) {
 
     console.log("🔹 Full request body received:", JSON.stringify({ messages, email, userId }, null, 2));
 
-    if (email && userId) {
+    if (!email || !userId) {
+      console.warn("⚠️ Email or ID not found in request body!");
+    } else {
       console.log("✅ Extracted email:", email);
       console.log("✅ Extracted userId:", userId);
-    } else {
-      console.warn("⚠️ Email or ID not found in request body!");
     }
 
-//   console.log("🔹 Full messages received:", JSON.stringify(messages, null, 2));
+    // ✅ Добавляем `email` и `userId` как скрытое сообщение в `messages`
+    const metadataMessage = {
+      role: "system",
+      content: `{"email": "${email}", "userId": "${userId}"}`, // JSON-строка, чтобы инструменты могли её парсить
+    };
 
+    const updatedMessages = [metadataMessage, ...messages]; // Добавляем перед всеми сообщениями
 
     const result = streamText({
       model: openai("gpt-4o"),
-      messages,
+      messages: updatedMessages, // Передаем измененный массив
       tools: {
         createAptosWallet,
         getJoulePools,
@@ -38,4 +43,3 @@ export async function POST(req: Request) {
     return new Response(JSON.stringify({ error: error.message }), { status: 500 });
   }
 }
-
