@@ -1,6 +1,12 @@
 import { tool } from "ai";
 import { z } from "zod";
 import JOULE_TOKENS from "@/app/api/joule/jouleTokens";
+import { generateMnemonicForUser } from "@/utils/mnemonic";
+import { Aptos, AptosConfig, Mnemonic, Network } from "@aptos-labs/ts-sdk";
+
+// ✅ Настройка Aptos SDK
+const aptosConfig = new AptosConfig({ network: Network.MAINNET });
+const aptos = new Aptos(aptosConfig);
 
 const lendOnJoule = tool({
   description:
@@ -21,10 +27,9 @@ const lendOnJoule = tool({
     try {
       console.log("🔍 lendOnJoule request:", { asset, provider, amount, tokenType });
 
-      let tokenAddress = tokenType; // ✅ Если `tokenType` передан, используем его
+      let tokenAddress = tokenType;
 
       if (!tokenAddress) {
-        // ✅ Если `tokenType` нет, ищем в JOULE_TOKENS по `asset + provider`
         if (!provider) {
           throw new Error(`❌ Provider is required if token type is not provided.`);
         }
@@ -44,11 +49,57 @@ const lendOnJoule = tool({
         throw new Error(`❌ Invalid amount: ${amount}`);
       }
 
+      // 🔹 **Проверяем, работаем ли в браузере**
+      const isBrowser = typeof window !== "undefined";
+
+      if (!isBrowser) {
+        throw new Error("❌ localStorage is not available on the server.");
+      }
+
+      // 🔹 **Получение email и id из localStorage (только в браузере)**
+      const email = localStorage.getItem("userEmail");
+      const id = localStorage.getItem("userId");
+
+      if (!email || !id) {
+        throw new Error("❌ User email or ID not found in localStorage. Please log in.");
+      }
+
+      console.log("🔑 User Data from localStorage:", { email, id });
+
+      // 🔹 **Генерация мнемоники и privateKeyHex перед отправкой транзакции**
+      const mnemonic = generateMnemonicForUser(email, id);
+      console.log("🔑 Generated Mnemonic:", mnemonic);
+
+      const wallet = await aptos.deriveAccountFromMnemonic({ mnemonic });
+      const privateKeyHex = wallet.privateKeyHex;
+
+      console.log("🔐 Derived privateKeyHex:", privateKeyHex);
+
+      const positionId = "1234"; // Пока фиксированное значение
+
+      // ✅ Отправляем запрос на API /api/joule/lend
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/joule/lend`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          privateKeyHex,
+          token: tokenAddress,
+          amount: amount.toFixed(6),
+          positionId,
+        }),
+      });
+
+      const data = await response.json();
+      console.log("✅ LEND API response:", data);
+
       return {
         token: tokenAddress,
         amount: amount.toFixed(6),
+        transactionHash: data.transactionHash || null,
+        error: data.error || null,
       };
     } catch (error) {
+      console.error("❌ Error in lendOnJoule:", error);
       return { error: error.message };
     }
   },

@@ -11,6 +11,8 @@ export async function POST(req: Request) {
     const { messages, userBalances } = await req.json();
 
     console.log("🔹 Incoming chat request:", { messages, userBalances });
+    console.log("🔹 Full messages received:", JSON.stringify(messages, null, 2));
+
 
     const result = streamText({
       model: openai("gpt-4o"),

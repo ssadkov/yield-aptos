@@ -14,9 +14,12 @@ import dynamic from "next/dynamic";
 const ReactMarkdown = dynamic(() => import("react-markdown"), { ssr: false });
 
 export default function Chat() {
-  const { messages, input, handleInputChange, handleSubmit, append, setMessages } = useChat({
+  const { messages, input, handleInputChange, handleSubmit, setMessages, append } = useChat({
     maxSteps: 5,
+    
   });
+
+
 
   const messagesEndRef = useRef(null);
   const [isMounted, setIsMounted] = useState(false);
@@ -66,6 +69,31 @@ export default function Chat() {
     ]);
   };
   
+
+  
+const handleSubmitWithUserData = async (e) => {
+  e.preventDefault();
+
+  const email = localStorage.getItem("userEmail");
+  const id = localStorage.getItem("userId");
+
+  if (!email || !id) {
+    alert("❌ User email or ID not found. Please log in.");
+    return;
+  }
+
+  console.log("🔄 Sending user message with:", { email, id, input });
+
+  await append({
+    role: "user",
+    content: input,
+    parameters: { email, id }, // ✅ Теперь передаем email и id во все сообщения
+  });
+
+  handleInputChange({ target: { value: "" } });
+};
+
+
 
   const handleSupplyClick = (pool) => {
     console.log("🔄 Supply clicked for:", pool);
@@ -140,7 +168,7 @@ export default function Chat() {
             </div>
 
             {/* Input Field */}
-            <form onSubmit={handleSubmit} className="flex gap-2 p-4 border-t">
+            <form onSubmit={handleSubmitWithUserData} className="flex gap-2 p-4 border-t">
               <Input
                 className="flex-1 p-2 border rounded-lg"
                 value={input}
