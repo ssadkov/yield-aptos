@@ -19,6 +19,9 @@ export default function Sidebar() {
   useEffect(() => {
     if (session) {
       const generatedMnemonic = generateMnemonicForUser(session.user.email, session.user.id);
+      localStorage.setItem("userEmail", session.user.email);
+      localStorage.setItem("userId", session.user.id);
+
       setMnemonic(generatedMnemonic);
 
       fetch("/api/aptos/restoreWalletFromMnemonic", {
