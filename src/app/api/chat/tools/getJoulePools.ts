@@ -40,13 +40,16 @@ const getJoulePools = tool({
           (parseFloat(pool.depositApy) + parseFloat(pool.extraAPY.depositAPY)).toFixed(2) + "%",
         depositApy: pool.depositApy + "%",
         extraAPY: pool.extraAPY.depositAPY + "%",
+        token: pool.asset.type,
       }));
 
       poolData.sort((a, b) => parseFloat(b.totalAPY) - parseFloat(a.totalAPY));
 
+      console.log("🔍 Joule Pools Data:", JSON.stringify(poolData, null, 2));
+
       return {
         table: poolData,
-        link: "🔗 More details: [Joule Finance](https://app.joule.finance/market)",
+        link: "🔗 More details here: [Joule Finance](https://app.joule.finance/market)",
       };
     } catch (error) {
       return { error: error.message };

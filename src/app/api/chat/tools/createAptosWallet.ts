@@ -2,7 +2,12 @@ import { tool } from "ai";
 import { z } from "zod";
 
 const createAptosWallet = tool({
-  description: "Creates a new Aptos wallet using an API.",
+  description: `
+  Creates a new Aptos wallet using an API.
+  This tool should only be used when the user explicitly requests to create a new Aptos wallet.
+  If the user has already provided a wallet address, do NOT invoke this tool.
+  This tool does NOT retrieve existing wallet addresses, it only creates new ones.
+`,
   parameters: z.object({}),
   execute: async () => {
     try {

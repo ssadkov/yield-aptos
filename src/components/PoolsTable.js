@@ -52,7 +52,7 @@ export default function PoolsTable({ pools, balances, onSupplyClick, onBotMessag
   };
 
 
-  
+  console.log(pools);
   
 
   return (
@@ -60,7 +60,6 @@ export default function PoolsTable({ pools, balances, onSupplyClick, onBotMessag
       <p className="text-green-600 dark:text-green-400 font-bold">
         ✅ Yield Pools
       </p>
-
       <table className="w-full border-collapse border border-gray-400 dark:border-gray-600">
         <thead>
           <tr className="bg-gray-500 dark:bg-gray-700 text-white">

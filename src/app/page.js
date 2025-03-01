@@ -30,14 +30,6 @@ export default function Chat() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Получаем адрес кошелька из localStorage (его туда сохраняет Sidebar)
-  // useEffect(() => {
-  //   const storedAddress = localStorage.getItem("aptosWalletAddress");
-  //   if (storedAddress) {
-  //     setUserAddress(storedAddress);
-  //     fetchBalances(storedAddress);
-  //   }
-  // }, []);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -76,20 +68,29 @@ export default function Chat() {
   
 
   const handleSupplyClick = (pool) => {
-    const userBalance = balances.find((b) => b.asset === pool.asset)?.balance || "0";
-    // const newInput = `Supply ${pool.asset} (${pool.provider}) on Joule Finance in the amount of ${userBalance}`;
-    // handleInputChange({ target: { value: newInput } });
-
     console.log("🔄 Supply clicked for:", pool);
 
-  // ✅ Добавляем серое сообщение в чат с формой ввода
-  onBotMessage({
-    type: "form", // Указываем, что это форма
-    content: `💰 Enter the amount to supply for ${pool.asset} (${pool.provider}):`,
-    pool,
-  });
+    const userBalance = balances.find((b) => b.asset === pool.asset)?.balance || "0";
+
+  
+    setMessages((prevMessages) => [
+      ...prevMessages,
+      {
+        id: nanoid(),
+        role: "assistant",
+        type: "form", // Теперь это форма
+        content: `💰 Enter the amount to supply for ${pool.asset} (${pool.provider}) \n\n 🔗 Token type: ${pool.token}`,
+        pool, // Передаем данные о пуле
+      },
+    ]);
+
+    handleInputChange({
+      target: { value: `${userBalance}` },
+    });
+  
 
   };
+  
 
   return (
     <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900">
@@ -131,7 +132,7 @@ export default function Chat() {
                       </div>
                     ))
                   ) : (
-                    <p>{m.content}</p>
+                    <p><ReactMarkdown>{m.content}</ReactMarkdown></p>
                   )}
                 </div>
               ))}
