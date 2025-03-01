@@ -71,27 +71,27 @@ export default function Chat() {
   
 
   
-const handleSubmitWithUserData = async (e) => {
-  e.preventDefault();
-
-  const email = localStorage.getItem("userEmail");
-  const id = localStorage.getItem("userId");
-
-  if (!email || !id) {
-    alert("❌ User email or ID not found. Please log in.");
-    return;
-  }
-
-  console.log("🔄 Sending user message with:", { email, id, input });
-
-  await append({
-    role: "user",
-    content: input,
-    parameters: { email, id }, // ✅ Теперь передаем email и id во все сообщения
-  });
-
-  handleInputChange({ target: { value: "" } });
-};
+  const handleSubmitWithUserData = async (e) => {
+    e.preventDefault();
+  
+    const email = localStorage.getItem("userEmail");
+    const userId = localStorage.getItem("userId");
+  
+    if (!email || !userId) {
+      alert("❌ User email or ID not found. Please log in.");
+      return;
+    }
+  
+    console.log("🔄 Sending user message with:", { email, userId, input });
+  
+    await append(
+      { role: "user", content: input }, // ✅ Оставляем только текст в `content`
+      { body: { email, userId } } // ✅ Передаем `email` и `userId` в `body`
+    );
+  
+    handleInputChange({ target: { value: "" } });
+  };
+  
 
 
 
