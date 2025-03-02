@@ -9,8 +9,7 @@ import PoolsTable from "@/components/PoolsTable";
 import LendForm from "@/components/LendForm"; // ✅ Импортируем LendForm
 import { nanoid } from "nanoid";
 import dynamic from "next/dynamic";
-import { generateMnemonicForUser } from "@/utils/mnemonic"; // ✅ Импортируем функцию генерации мнемоники
-
+import { generateMnemonicForUser } from "@/utils/mnemonic"; // ✅ Импортируем генератор мнемоники
 
 // Отключаем SSR для react-markdown
 const ReactMarkdown = dynamic(() => import("react-markdown"), { ssr: false });
@@ -26,7 +25,8 @@ export default function Chat() {
   const messagesEndRef = useRef(null);
   const [balances, setBalances] = useState([]);
   const [userAddress, setUserAddress] = useState("");
-  const [lendData, setLendData] = useState(null); // ✅ Добавляем состояние для ленда
+  const [lendData, setLendData] = useState(null);
+  const [isLending, setIsLending] = useState(false);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -90,7 +90,6 @@ export default function Chat() {
   
     const userBalance = balances.find((b) => b.asset === pool.asset)?.balance || "0";
   
-    // 🔧 Теперь сообщение всегда добавляется, без проверки на дублирование
     setMessages((prevMessages) => [
       ...prevMessages,
       {
@@ -107,39 +106,39 @@ export default function Chat() {
     });
   };
 
-  
   const handleLendClick = async (token, amount) => {
     const email = localStorage.getItem("userEmail");
     const userId = localStorage.getItem("userId");
-  
+
     if (!email || !userId) {
       alert("❌ User email or ID not found. Please log in.");
       return;
     }
-  
-    // ✅ Генерируем мнемонику на основе userEmail и userId
+
+    setIsLending(true);
+    handleBotMessage("⏳ Processing lend transaction...");
+
     const mnemonic = generateMnemonicForUser(email, userId);
     console.log("🔑 Generated mnemonic:", mnemonic);
-  
+
     try {
-      // 🔥 Восстанавливаем privateKeyHex через API
       const walletResponse = await fetch("/api/aptos/restoreWalletFromMnemonic", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ mnemonic }),
       });
-  
+
       const walletData = await walletResponse.json();
-  
+
       if (!walletData.privateKeyHex) {
         handleBotMessage("❌ Failed to retrieve private key.");
+        setIsLending(false);
         return;
       }
-  
+
       const privateKeyHex = walletData.privateKeyHex;
       console.log("🔑 Private Key Retrieved:", privateKeyHex);
-  
-      // 🔥 Отправляем запрос на ленд
+
       const lendResponse = await fetch("/api/joule/lend", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -147,12 +146,12 @@ export default function Chat() {
           privateKeyHex,
           token,
           amount,
-          positionId: "1234", // Пока фиксируем ID позиции
+          positionId: "1234",
         }),
       });
-  
+
       const lendData = await lendResponse.json();
-  
+
       if (lendData.transactionHash) {
         const explorerLink = `https://explorer.aptoslabs.com/txn/${lendData.transactionHash}?network=mainnet`;
         handleBotMessage(`✅ Lend transaction successful!\n🔗 [View on Explorer](${explorerLink})`);
@@ -162,14 +161,9 @@ export default function Chat() {
     } catch (error) {
       console.error("❌ Error executing lend transaction:", error);
       handleBotMessage("❌ Error executing lend transaction.");
+    } finally {
+      setIsLending(false);
     }
-  };
-    
-  
-
-  const handleLendResponse = (data) => {
-    console.log("🔹 Lend Response:", data);
-    setLendData(data); // ✅ Сохраняем данные для ленда
   };
 
   return (
@@ -183,8 +177,8 @@ export default function Chat() {
                   m.toolInvocations
                     ? "bg-gray-300 dark:bg-gray-800 text-gray-900 dark:text-white max-w-full"
                     : m.role === "user"
-                    ? "bg-blue-500 text-white max-w-[75%] ml-auto" // ✅ Белый шрифт для пользователя
-                    : "bg-gray-200 dark:bg-gray-700 text-black dark:text-gray-300 max-w-[75%]" // ✅ Чёрный шрифт для бота
+                    ? "bg-blue-500 text-white max-w-[75%] ml-auto"
+                    : "bg-gray-200 dark:bg-gray-700 text-black dark:text-gray-300 max-w-[75%]"
                 }`}>
                   {m.toolInvocations ? (
                     m.toolInvocations.map((tool, i) => (
@@ -192,15 +186,8 @@ export default function Chat() {
                         <p className="text-gray-700 dark:text-gray-300 font-semibold flex items-center">
                           🔧 {tool.toolName} was invoked
                         </p>
-                        {tool.toolName === "lendOnJoule" ? (
-                          <>
-                            <pre className="whitespace-pre-wrap break-words overflow-x-auto w-full">
-                              {JSON.stringify(tool.result, null, 2)}
-                            </pre>
-                            {tool.result?.token && tool.result?.amount && (
-                              <LendForm token={tool.result.token} amount={tool.result.amount} onLendClick={handleLendClick} />
-                            )}
-                          </>
+                        {tool.toolName === "lendOnJoule" && tool.result?.token && tool.result?.amount ? (
+                          <LendForm token={tool.result.token} amount={tool.result.amount} onLend={handleLendClick} isLending={isLending} />
                         ) : tool.toolName === "getJoulePools" && tool.result?.table ? (
                           <PoolsTable
                             pools={tool.result.table}
@@ -216,22 +203,19 @@ export default function Chat() {
                       </div>
                     ))
                   ) : (
-                    <div className={m.role === "user" ? "text-white" : "text-black dark:text-gray-300"}>
-                      <ReactMarkdown components={{ p: "span" }}>{m.content}</ReactMarkdown>
-                    </div>
+                    <ReactMarkdown components={{ p: "span" }}>{m.content}</ReactMarkdown>
                   )}
                 </div>
               ))}
               <div ref={messagesEndRef} />
             </div>
 
+            {/* ✅ ВОЗВРАЩЕНО ПОЛЕ ВВОДА */}
             <form onSubmit={handleSubmitWithUserData} className="flex gap-2 p-4 border-t">
               <Input className="flex-1 p-2 border rounded-lg" value={input} placeholder="Type a message" onChange={handleInputChange} />
               <Button type="submit" className="bg-black text-white">Send</Button>
             </form>
 
-            {/* ✅ Вставляем форму ленда после обработки lendOnJoule */}
-            {lendData && <LendForm token={lendData.token} amount={lendData.amount} />}
           </CardContent>
         </Card>
       </div>
