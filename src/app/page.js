@@ -122,25 +122,49 @@ export default function Chat() {
     console.log("🔑 Generated mnemonic:", mnemonic);
   
     try {
-      const response = await fetch("/api/aptos/restoreWalletFromMnemonic", {
+      // 🔥 Восстанавливаем privateKeyHex через API
+      const walletResponse = await fetch("/api/aptos/restoreWalletFromMnemonic", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ mnemonic }),
       });
   
-      const data = await response.json();
-      
-      if (data.privateKeyHex) {
-        alert(`🔑 Private Key: ${data.privateKeyHex}`);
+      const walletData = await walletResponse.json();
+  
+      if (!walletData.privateKeyHex) {
+        handleBotMessage("❌ Failed to retrieve private key.");
+        return;
+      }
+  
+      const privateKeyHex = walletData.privateKeyHex;
+      console.log("🔑 Private Key Retrieved:", privateKeyHex);
+  
+      // 🔥 Отправляем запрос на ленд
+      const lendResponse = await fetch("/api/joule/lend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          privateKeyHex,
+          token,
+          amount,
+          positionId: "1234", // Пока фиксируем ID позиции
+        }),
+      });
+  
+      const lendData = await lendResponse.json();
+  
+      if (lendData.transactionHash) {
+        const explorerLink = `https://explorer.aptoslabs.com/txn/${lendData.transactionHash}?network=mainnet`;
+        handleBotMessage(`✅ Lend transaction successful!\n🔗 [View on Explorer](${explorerLink})`);
       } else {
-        alert("❌ Failed to retrieve private key.");
+        handleBotMessage("❌ Lend transaction failed.");
       }
     } catch (error) {
-      console.error("❌ Error retrieving private key:", error);
-      alert("❌ Error retrieving private key.");
+      console.error("❌ Error executing lend transaction:", error);
+      handleBotMessage("❌ Error executing lend transaction.");
     }
   };
-  
+    
   
 
   const handleLendResponse = (data) => {
