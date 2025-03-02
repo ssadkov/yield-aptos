@@ -99,7 +99,7 @@ export default function Sidebar() {
     return key.slice(0, 6) + "..." + key.slice(-6);
   };
 
-  const formatAmount = (value) => (parseFloat(value) / 1e6).toFixed(6);
+  const formatAmount = (value) => (parseFloat(value) / 1e6).toFixed(2);
 
   const getProvider = (key) => {
     if (key.startsWith("@357b0b74")) return "Tether";
@@ -113,7 +113,8 @@ export default function Sidebar() {
   };
 
   const formatAddress = (address) =>
-    address ? `${address.slice(0, 10)}...${address.slice(-10)}` : "Loading...";
+    address ? `${address.slice(0, 5)}.......${address.slice(-4)}` : "Loading...";
+  
 
   return (
     <>
@@ -158,8 +159,7 @@ export default function Sidebar() {
                     </a>
                   </div>
                 </div>
-
-                <Button className="w-full mt-4 flex items-center gap-2" onClick={() => toast(`Mnemonic: ${mnemonic}`)}>
+                <Button className="w-full mt-4 flex items-center gap-2 bg-gray-500 text-white" onClick={() => toast(`Mnemonic: ${mnemonic}`)}>
                   Show Mnemonic <Eye size={18} />
                 </Button>
 
@@ -198,7 +198,7 @@ export default function Sidebar() {
                   </div>
                 )}
 
-                <Button onClick={() => signOut()} className="w-full mt-4">
+                <Button onClick={() => signOut()} className="w-full mt-4 bg-gray-500 text-white">
                   Sign out
                 </Button>
               </div>
