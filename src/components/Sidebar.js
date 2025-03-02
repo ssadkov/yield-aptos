@@ -14,6 +14,7 @@ export default function Sidebar() {
   const [aptosAddress, setAptosAddress] = useState("");
   const [mnemonic, setMnemonic] = useState("");
   const [balances, setBalances] = useState([]);
+  const [positions, setPositions] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -34,6 +35,7 @@ export default function Sidebar() {
             setAptosAddress(data.address);
             localStorage.setItem("aptosWalletAddress", data.address);
             fetchBalances(data.address);
+            fetchUserPositions(data.address);
           } else {
             console.error("API Error:", data.error);
           }
@@ -55,12 +57,54 @@ export default function Sidebar() {
       const data = await res.json();
       setBalances(data.balances || []);
       toast.success("Assets updated!");
+
+      // ✅ Обновляем и позиции пользователя!
+      await fetchUserPositions(address);
     } catch (error) {
       console.error("❌ Balance update error:", error);
       toast.error("Error loading balances");
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchUserPositions = async (address = aptosAddress) => {
+    if (!address) return;
+
+    try {
+      console.log(`🔄 Fetching user positions for ${address}`);
+      const res = await fetch(`/api/joule/userPositions?address=${address}`);
+      const data = await res.json();
+
+      if (data?.userPositions?.length > 0) {
+        const positionsData = data.userPositions[0].positions_map.data.flatMap((position) =>
+          position.value.lend_positions.data.map((pos) => ({
+            token: formatTokenKey(pos.key),
+            amount: formatAmount(pos.value),
+            provider: getProvider(pos.key),
+          }))
+        );
+        setPositions(positionsData);
+      } else {
+        setPositions([]);
+      }
+    } catch (error) {
+      console.error("❌ Error fetching positions:", error);
+    }
+  };
+
+  const formatTokenKey = (key) => {
+    if (key.startsWith("@357b0b74")) return "USDT";
+    if (key.includes("aptos_coin")) return "APT";
+    return key.slice(0, 6) + "..." + key.slice(-6);
+  };
+
+  const formatAmount = (value) => (parseFloat(value) / 1e6).toFixed(6);
+
+  const getProvider = (key) => {
+    if (key.startsWith("@357b0b74")) return "Tether";
+    if (key.includes("aptos_coin")) return "Aptos";
+    return "Unknown Provider";
   };
 
   const copyToClipboard = () => {
@@ -74,12 +118,11 @@ export default function Sidebar() {
   return (
     <>
       <Toaster position="top-right" reverseOrder={false} />
-      {/* Фон под меню при открытии на мобильных */}
+
       {isOpen && (
         <div className="fixed inset-0 bg-black opacity-50 z-40 lg:hidden" onClick={() => setIsOpen(false)}></div>
       )}
 
-      {/* Бургер кнопка - всегда использовать lg для соответствия */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="fixed top-4 left-4 z-50 p-2 rounded-md bg-gray-800 text-white shadow lg:hidden flex items-center"
@@ -87,7 +130,6 @@ export default function Sidebar() {
         {isOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
 
-      {/* Sidebar - уменьшаем отступ сверху для мобильных устройств */}
       <aside
         className={`fixed top-0 left-0 h-full w-72 bg-gray-100 dark:bg-gray-900 transition-transform duration-300 ease-in-out z-40
           ${isOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0 lg:w-80 border-r border-border flex justify-center`}
@@ -100,69 +142,61 @@ export default function Sidebar() {
               <div className="w-full text-center">
                 <p className="text-sm mb-2">{session.user.email}</p>
 
-                {/* Aptos Address */}
                 <div className="flex items-center justify-between w-full bg-gray-200 dark:bg-gray-700 p-3 rounded-lg mt-4">
                   <span className="truncate text-sm">{formatAddress(aptosAddress)}</span>
                   <div className="flex space-x-2">
-                    {/* Копирование */}
-                    <button
-                      onClick={copyToClipboard}
-                      className="p-2 rounded-lg bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500 transition"
-                    >
+                    <button onClick={copyToClipboard} className="p-2 rounded-lg bg-gray-300 dark:bg-gray-600">
                       <Copy size={20} />
                     </button>
-                    {/* Обозреватель транзакций */}
                     <a
                       href={`https://explorer.aptoslabs.com/account/${aptosAddress}?network=mainnet`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="p-2 rounded-lg bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500 transition"
+                      className="p-2 rounded-lg bg-gray-300 dark:bg-gray-600"
                     >
                       <ExternalLink size={20} />
                     </a>
                   </div>
                 </div>
 
-                {/* Mnemonic под кошельком, с иконкой глаза */}
-                <Button
-                  className="w-full mt-4 flex items-center justify-center gap-2 bg-gray-300 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-400 dark:hover:bg-gray-600 transition"
-                  onClick={() => toast(`Mnemonic: ${mnemonic}`, { duration: 5000 })}
-                >
+                <Button className="w-full mt-4 flex items-center gap-2" onClick={() => toast(`Mnemonic: ${mnemonic}`)}>
                   Show Mnemonic <Eye size={18} />
                 </Button>
 
-                {/* Assets - максимальная высота и скролл для мобильных устройств */}
-                <div className="w-full mt-4 text-sm text-gray-900 dark:text-gray-300 max-h-[40vh] overflow-y-auto">
-                  <div className="flex justify-between items-center">
+                <div className="w-full mt-4 text-sm">
+                  <div className="flex justify-between items-center mb-2">
                     <h3 className="text-lg font-semibold">Assets</h3>
-                    <button
-                      onClick={() => fetchBalances()}
-                      className={`p-1 rounded-md ${
-                        loading ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-300 dark:hover:bg-gray-600"
-                      } transition`}
-                    >
+                    <button onClick={() => fetchBalances()} className="p-1">
                       <RefreshCw size={20} />
                     </button>
                   </div>
+                  <ul className="space-y-2">
+                    {balances.map((b, index) => (
+                      <li key={index} className="flex justify-between p-2 bg-gray-200 rounded-md">
+                        <span>
+                          {b.asset} {b.provider && <span className="text-xs text-gray-500">({b.provider})</span>}
+                        </span>
+                        <span className="font-bold">{b.balance}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
 
-                  {balances.length > 0 ? (
-                    <ul className="mt-2 space-y-2">
-                      {balances.map((b, index) => (
-                        <li key={index} className="flex justify-between bg-gray-200 dark:bg-gray-700 p-2 rounded-md">
+                {positions.length > 0 && (
+                  <div className="w-full mt-6 text-sm">
+                    <h3 className="text-lg font-semibold text-left">Positions on Joule</h3>
+                    <ul className="space-y-2 mt-2">
+                      {positions.map((pos, index) => (
+                        <li key={index} className="flex justify-between p-2 bg-gray-200 rounded-md">
                           <span>
-                            {b.asset}{" "}
-                            {b.provider && (
-                              <span className="text-xs text-gray-500 dark:text-gray-400">({b.provider})</span>
-                            )}
+                            {pos.token} {pos.provider && <span className="text-xs text-gray-500">({pos.provider})</span>}
                           </span>
-                          <span className="font-bold">{b.balance}</span>
+                          <span className="font-bold">{pos.amount}</span>
                         </li>
                       ))}
                     </ul>
-                  ) : (
-                    <p className="mt-2 text-gray-500">No assets found</p>
-                  )}
-                </div>
+                  </div>
+                )}
 
                 <Button onClick={() => signOut()} className="w-full mt-4">
                   Sign out
