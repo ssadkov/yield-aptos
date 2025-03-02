@@ -6,10 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useEffect, useRef, useState } from "react";
 import PoolsTable from "@/components/PoolsTable";
-import LendForm from "@/components/LendForm"; // ✅ Импортируем LendForm
+import LendForm from "@/components/LendForm";
 import { nanoid } from "nanoid";
 import dynamic from "next/dynamic";
-import { generateMnemonicForUser } from "@/utils/mnemonic"; // ✅ Импортируем генератор мнемоники
+import { generateMnemonicForUser } from "@/utils/mnemonic";
 
 // Отключаем SSR для react-markdown
 const ReactMarkdown = dynamic(() => import("react-markdown"), { ssr: false });
@@ -167,8 +167,10 @@ export default function Chat() {
   };
 
   return (
+    // Изменяем контейнер, чтобы учитывать сайдбар на разных размерах экрана
     <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900">
-      <div className="flex-1 flex flex-col items-center justify-center px-4">
+      {/* Добавляем отступ справа равный ширине сайдбара только на lg экранах */}
+      <div className="flex-1 lg:ml-80 flex flex-col items-center justify-center px-4">
         <Card className="w-full max-w-3xl shadow-lg bg-white dark:bg-gray-800 flex flex-col h-[calc(100vh-6rem)]">
           <CardContent className="p-6 flex flex-col flex-grow overflow-hidden">
             <div className="flex-1 overflow-y-auto space-y-4 p-4">
@@ -210,7 +212,6 @@ export default function Chat() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* ✅ ВОЗВРАЩЕНО ПОЛЕ ВВОДА */}
             <form onSubmit={handleSubmitWithUserData} className="flex gap-2 p-4 border-t">
               <Input className="flex-1 p-2 border rounded-lg" value={input} placeholder="Type a message" onChange={handleInputChange} />
               <Button type="submit" className="bg-black text-white">Send</Button>
