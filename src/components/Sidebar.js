@@ -87,12 +87,12 @@ export default function Sidebar() {
         {isOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
 
-      {/* Sidebar */}
+      {/* Sidebar - уменьшаем отступ сверху для мобильных устройств */}
       <aside
         className={`fixed top-0 left-0 h-full w-72 bg-gray-100 dark:bg-gray-900 transition-transform duration-300 ease-in-out z-40
           ${isOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0 lg:w-80 border-r border-border flex justify-center`}
       >
-        <Card className="w-[90%] bg-white dark:bg-gray-800 text-foreground shadow-md mt-12 mb-12 h-auto">
+        <Card className="w-[90%] bg-white dark:bg-gray-800 text-foreground shadow-md mt-16 lg:mt-12 mb-12 h-auto overflow-y-auto">
           <CardContent className="p-6 flex flex-col items-center">
             <h2 className="text-xl font-bold text-center mb-4">Yield-AI Wallet</h2>
 
@@ -131,8 +131,8 @@ export default function Sidebar() {
                   Show Mnemonic <Eye size={18} />
                 </Button>
 
-                {/* Assets */}
-                <div className="w-full mt-4 text-sm text-gray-900 dark:text-gray-300">
+                {/* Assets - максимальная высота и скролл для мобильных устройств */}
+                <div className="w-full mt-4 text-sm text-gray-900 dark:text-gray-300 max-h-[40vh] overflow-y-auto">
                   <div className="flex justify-between items-center">
                     <h3 className="text-lg font-semibold">Assets</h3>
                     <button

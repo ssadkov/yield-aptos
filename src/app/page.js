@@ -167,11 +167,11 @@ export default function Chat() {
   };
 
   return (
-    // Изменяем контейнер, чтобы учитывать сайдбар на разных размерах экрана
     <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900">
-      {/* Добавляем отступ справа равный ширине сайдбара только на lg экранах */}
-      <div className="flex-1 lg:ml-80 flex flex-col items-center justify-center px-4">
-        <Card className="w-full max-w-3xl shadow-lg bg-white dark:bg-gray-800 flex flex-col h-[calc(100vh-6rem)]">
+      {/* Добавляем отступ справа равный ширине сайдбара только на lg экранах
+          Добавляем отступ сверху для мобильных устройств */}
+      <div className="flex-1 lg:ml-80 flex flex-col items-center justify-center px-4 pt-16 lg:pt-4">
+        <Card className="w-full max-w-3xl shadow-lg bg-white dark:bg-gray-800 flex flex-col h-[calc(100vh-5rem)]">
           <CardContent className="p-6 flex flex-col flex-grow overflow-hidden">
             <div className="flex-1 overflow-y-auto space-y-4 p-4">
               {messages.map((m, index) => (
