@@ -1,7 +1,7 @@
 import { openai } from "@ai-sdk/openai";
 import { streamText } from "ai";
 import createAptosWallet from "@/app/api/chat/tools/createAptosWallet";
-import getJoulePools from "@/app/api/chat/tools/getJoulePools";
+import getPools from "@/app/api/chat/tools/getPools";
 import lendOnJoule from "@/app/api/chat/tools/lendOnJoule";
 
 export const maxDuration = 30;
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
       messages,
       tools: {
         createAptosWallet,
-        getJoulePools,
+        getPools,
         lendOnJoule,
       },
     });

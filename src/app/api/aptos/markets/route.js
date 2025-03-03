@@ -4,7 +4,7 @@ import JOULE_TOKENS from "@/app/api/joule/jouleTokens";
 export async function GET(req) {
   try {
     const { searchParams } = new URL(req.url);
-    const assetName = searchParams.get("assetname");
+    const assetName = searchParams.get("asset");
     const protocol = searchParams.get("protocol");
 
     let combinedPools = [];
@@ -96,7 +96,8 @@ export async function GET(req) {
     // 🏷️ Фильтрация по assetName, если параметр передан
     if (assetName) {
       combinedPools = combinedPools.filter((pool) =>
-        pool.asset.toUpperCase().includes(assetName.toUpperCase())
+        pool.asset.toUpperCase().includes(assetName.toUpperCase()) ||
+        pool.token.toUpperCase().includes(assetName.toUpperCase())
       );
     }
 

@@ -190,7 +190,7 @@ export default function Chat() {
                         </p>
                         {tool.toolName === "lendOnJoule" && tool.result?.token && tool.result?.amount ? (
                           <LendForm token={tool.result.token} amount={tool.result.amount} onLend={handleLendClick} isLending={isLending} />
-                        ) : tool.toolName === "getJoulePools" && tool.result?.table ? (
+                        ) : tool.toolName === "getPools" && tool.result?.table ? (
                           <PoolsTable
                             pools={tool.result.table}
                             balances={balances}
