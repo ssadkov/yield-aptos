@@ -6,24 +6,19 @@ export default function PoolsTable({ pools, balances, onSupplyClick, onBotMessag
   const hasToken = (token) => balances.some((b) => b.asset === token && parseFloat(b.balance) > 0);
   const hasAnyBalance = balances.length > 0 && balances.some((b) => parseFloat(b.balance) > 0);
 
-  // 🔄 Обработчик кнопки "Swap and Supply"
   const handleSwapAndSupplyClick = async () => {
     console.log("🔄 Swap and Supply started...");
-  
-    // ✅ 1. Бот отправляет первое сообщение
     onBotMessage("🤖 To swap and supply, please ensure you have a wallet ready. Creating an Aptos wallet now...");
-  
+
     try {
-      // ✅ 2. Запрашиваем создание Aptos кошелька напрямую
       const response = await fetch("/api/aptos/createWallet", {
         method: "GET",
         headers: { "Accept": "application/json" },
       });
-  
+
       const data = await response.json();
       console.log("✅ CreateAptosWallet Response:", data);
-  
-      // ✅ 3. Отправляем в чат результат создания кошелька
+
       if (data.error) {
         onBotMessage(`❌ Error creating wallet: ${data.error}`);
       } else {
@@ -35,17 +30,6 @@ export default function PoolsTable({ pools, balances, onSupplyClick, onBotMessag
     }
   };
 
-  
-  const handleSupplyClick = (pool) => {
-    const userBalance = balances.find((b) => b.asset === pool.asset)?.balance || "0";
-    const newInput = `Supply ${pool.asset} (${pool.provider}) on Joule Finance in the amount of ${userBalance}`;
-    handleInputChange({ target: { value: newInput } });
-  };
-
-
-  // console.log(pools);
-  
-
   return (
     <div className="mt-2 overflow-x-auto w-full">
       <p className="text-green-600 dark:text-green-400 font-bold">
@@ -55,21 +39,17 @@ export default function PoolsTable({ pools, balances, onSupplyClick, onBotMessag
         <thead>
           <tr className="bg-gray-500 dark:bg-gray-700 text-white">
             <th className="border border-gray-400 p-2">Asset</th>
-            <th className="border border-gray-400 p-2">Provider</th>
-            <th className="border border-gray-400 p-2">Total APY</th>
-            <th className="border border-gray-400 p-2">Deposit APY</th>
-            <th className="border border-gray-400 p-2">Extra APY</th>
+            <th className="border border-gray-400 p-2">Protocol</th>
+            <th className="border border-gray-400 p-2">Supply APR</th>
             <th className="border border-gray-400 p-2">Action</th>
           </tr>
         </thead>
         <tbody>
           {pools.map((row, idx) => (
             <tr key={idx} className="bg-white dark:bg-gray-800">
-              <td className="border border-gray-400 p-2">{row.asset}</td>
-              <td className="border border-gray-400 p-2">{row.provider}</td>
+              <td className="border border-gray-400 p-2">{row.asset} ({row.provider})</td>
+              <td className="border border-gray-400 p-2">{row.protocol}</td> {/* ✅ Показываем protocol */}
               <td className="border border-gray-400 p-2 font-bold">{parseFloat(row.totalAPY).toFixed(2)}%</td>
-              <td className="border border-gray-400 p-2">{parseFloat(row.depositApy).toFixed(2)}%</td>
-              <td className="border border-gray-400 p-2">{parseFloat(row.extraAPY).toFixed(2)}%</td>
               <td className="border border-gray-400 p-2">
                 {hasToken(row.asset) ? (
                   <Button 
@@ -81,7 +61,7 @@ export default function PoolsTable({ pools, balances, onSupplyClick, onBotMessag
                 ) : hasAnyBalance ? (
                   <Button 
                     className="bg-yellow-500 text-white px-4 py-1 rounded"
-                    onClick={handleSwapAndSupplyClick} // ✅ Теперь отправляем сообщение от бота
+                    onClick={handleSwapAndSupplyClick}
                   >
                     Swap and Supply
                   </Button>
@@ -93,7 +73,6 @@ export default function PoolsTable({ pools, balances, onSupplyClick, onBotMessag
           ))}
         </tbody>
       </table>
-
     </div>
   );
 }

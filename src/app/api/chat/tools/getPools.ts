@@ -25,23 +25,22 @@ const getPools = tool({
 
       const pools = await response.json();
 
-      if (!Array.isArray(pools) || pools.length === 0) {
+      // Проверяем, есть ли в ответе массив данных
+      if (!pools || !Array.isArray(pools.data) || pools.data.length === 0) {
         return { message: `No pools found for asset: ${asset}` };
       }
 
-      const poolData = pools.map((pool) => ({
+      const poolData = pools.data.map((pool) => ({
         asset: pool.asset,
         provider: pool.provider,
-        totalAPY:
-          (parseFloat(pool.depositApy) + parseFloat(pool.extraAPY)).toFixed(2) + "%",
-        depositApy: pool.depositApy + "%",
-        extraAPY: pool.extraAPY + "%",
+        totalAPY: pool.totalAPY.toFixed(2) + "%",
         token: pool.token,
+        protocol: pool.protocol, // ✅ Добавляем протокол
       }));
 
       poolData.sort((a, b) => parseFloat(b.totalAPY) - parseFloat(a.totalAPY));
 
-      console.log("🔍 Pools Data:", JSON.stringify(poolData, null, 2));
+      // console.log("🔍 Pools Data:", JSON.stringify(poolData, null, 2));
 
       return {
         table: poolData,

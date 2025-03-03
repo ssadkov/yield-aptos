@@ -96,7 +96,7 @@ export default function Chat() {
         id: nanoid(),
         role: "assistant",
         type: "form",
-        content: `💰 Enter the amount to supply for ${pool.asset} (${pool.provider}) \n\n 🔗 Token type: ${pool.token}`,
+        content: `💰 Enter the amount to supply for ${pool.asset} (${pool.provider}) on ${pool.protocol} \n\n 🔗 Token type: ${pool.token}`,
         pool,
       },
     ]);
