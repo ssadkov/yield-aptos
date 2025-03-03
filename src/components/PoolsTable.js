@@ -94,15 +94,6 @@ export default function PoolsTable({ pools, balances, onSupplyClick, onBotMessag
         </tbody>
       </table>
 
-      <p className="mt-2 text-blue-600 dark:text-blue-400">
-        <a
-          href="https://app.joule.finance/market"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          🔗 More details on Joule Finance
-        </a>
-      </p>
     </div>
   );
 }

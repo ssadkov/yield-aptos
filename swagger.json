@@ -317,7 +317,84 @@
       }
     }
   }
-}
+  },
+      "/api/aptos/markets": {
+        "get": {
+          "summary": "Retrieve Aptos market data",
+          "description": "Returns market data for various assets on the Aptos blockchain.",
+          "parameters": [
+            {
+              "name": "asset",
+              "in": "query",
+              "description": "Filter results by asset name (e.g., 'APT', 'USDC')",
+              "required": false,
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "protocol",
+              "in": "query",
+              "description": "Filter results by protocol (e.g., 'Joule', 'Echelon')",
+              "required": false,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Returns a list of market data",
+              "content": {
+                "application/json": {
+                  "example": [
+                    {
+                      "asset": "APT",
+                      "provider": "Aptos",
+                      "totalAPY": 5.25,
+                      "depositApy": 3.5,
+                      "extraAPY": 1.75,
+                      "borrowAPY": 4.8,
+                      "extraBorrowAPY": 0,
+                      "extraStakingAPY": 0,
+                      "token": "0x1::aptos_coin::AptosCoin",
+                      "protocol": "Joule"
+                    },
+                    {
+                      "asset": "USDC",
+                      "provider": "LayerZero USDC",
+                      "totalAPY": 7.1,
+                      "depositApy": 2.8,
+                      "extraAPY": 4.3,
+                      "borrowAPY": 5.6,
+                      "extraBorrowAPY": 0,
+                      "extraStakingAPY": 0,
+                      "token": "0xf22bede237a07e121b56d91a491eb7bcdfd1f5907926a9e58338f964a01b17fa::asset::USDC",
+                      "protocol": "Echelon"
+                    }
+                  ]
+                }
+              }
+            },
+            "400": {
+              "description": "Bad request - invalid parameters",
+              "content": {
+                "application/json": {
+                  "example": { "error": "Invalid asset name" }
+                }
+              }
+            },
+            "500": {
+              "description": "Server error",
+              "content": {
+                "application/json": {
+                  "example": { "error": "Failed to retrieve market data" }
+                }
+              }
+            }
+          }
+        }
+      }
 
   }
 }
