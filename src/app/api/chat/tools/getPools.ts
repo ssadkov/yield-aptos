@@ -8,16 +8,22 @@ const getPools = tool({
     asset: z.string().describe(
       "The asset name (e.g., USD, APT, BTC, ETH) to fetch yield pools for"
     ),
+    protocol: z.string().optional().describe(
+      "Optional protocol filter (e.g., 'Joule', 'Echelon')"
+    ),
   }),
-  execute: async ({ asset }) => {
+  execute: async ({ asset, protocol }) => {
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/aptos/markets?asset=${encodeURIComponent(asset)}`,
-        {
-          method: "GET",
-          headers: { Accept: "application/json" },
-        }
-      );
+      // Формируем URL с параметрами
+      let url = `${process.env.NEXT_PUBLIC_API_URL}/api/aptos/markets?asset=${encodeURIComponent(asset)}`;
+      if (protocol) {
+        url += `&protocol=${encodeURIComponent(protocol)}`;
+      }
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: { Accept: "application/json" },
+      });
 
       if (!response.ok) {
         throw new Error(`Failed to fetch pools: ${response.statusText}`);
@@ -27,10 +33,10 @@ const getPools = tool({
 
       // Проверяем, есть ли в ответе массив данных
       if (!pools || !Array.isArray(pools.data) || pools.data.length === 0) {
-        return { message: `No pools found for asset: ${asset}` };
+        return { message: `No pools found for asset: ${asset} ${protocol ? `with protocol: ${protocol}` : ""}` };
       }
 
-      const poolData = pools.data.map((pool) => ({
+      let poolData = pools.data.map((pool) => ({
         asset: pool.asset,
         provider: pool.provider,
         totalAPY: pool.totalAPY.toFixed(2) + "%",
@@ -38,9 +44,13 @@ const getPools = tool({
         protocol: pool.protocol, // ✅ Добавляем протокол
       }));
 
-      poolData.sort((a, b) => parseFloat(b.totalAPY) - parseFloat(a.totalAPY));
+      // Если `protocol` передан, дополнительно фильтруем
+      if (protocol) {
+        poolData = poolData.filter((pool) => pool.protocol === protocol);
+      }
 
-      // console.log("🔍 Pools Data:", JSON.stringify(poolData, null, 2));
+      // Сортируем по убыванию APY
+      poolData.sort((a, b) => parseFloat(b.totalAPY) - parseFloat(a.totalAPY));
 
       return {
         table: poolData,

@@ -117,7 +117,8 @@ const JOULE_TOKENS = [
     provider: "LayerZero USDT",
     token: "0xf22bede237a07e121b56d91a491eb7bcdfd1f5907926a9e58338f964a01b17fa::asset::USDT",
     decimals: 1000000,
-    isFungible: false
+    isFungible: false,
+    icon: "https://raw.githubusercontent.com/PanoraExchange/Aptos-Tokens/main/logos/lzUSDT.png"
   },
   {
     assetName: "StakeStone ETH",
