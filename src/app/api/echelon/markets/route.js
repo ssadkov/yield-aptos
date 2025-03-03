@@ -30,11 +30,13 @@ export async function GET() {
     for (const market of markets) {
       const coin = await client.getMarketCoin(market); // Получаем coin
       const apr = await client.getSupplyApr(market); // Получаем Supply APR
+      const bapr = await client.getBorrowApr(market); // Получаем Borrow APR
 
       marketData.push({
         market,
         coin,
         supplyAPR: apr,
+        borrowAPR: bapr,
       });
     }
 
