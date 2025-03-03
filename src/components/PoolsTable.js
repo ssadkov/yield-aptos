@@ -16,26 +16,9 @@ export default function PoolsTable({ pools, balances, onSupplyClick, onBotMessag
 
   const handleSwapAndSupplyClick = async () => {
     console.log("🔄 Swap and Supply started...");
-    onBotMessage("🤖 To swap and supply, please ensure you have a wallet ready. Creating an Aptos wallet now...");
+    onBotMessage("🤖 To swap and supply, please ensure you have a wallet ready. ");
 
-    try {
-      const response = await fetch("/api/aptos/createWallet", {
-        method: "GET",
-        headers: { "Accept": "application/json" },
-      });
-
-      const data = await response.json();
-      console.log("✅ CreateAptosWallet Response:", data);
-
-      if (data.error) {
-        onBotMessage(`❌ Error creating wallet: ${data.error}`);
-      } else {
-        onBotMessage(`✅ Wallet created!\n🔗 Address: ${data.address}`);
-      }
-    } catch (error) {
-      console.error("❌ Error creating wallet:", error);
-      onBotMessage("❌ Failed to create wallet. Please try again.");
-    }
+    
   };
 
   return (

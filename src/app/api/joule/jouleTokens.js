@@ -99,7 +99,7 @@ const JOULE_TOKENS = [
     icon: "https://raw.githubusercontent.com/PanoraExchange/Aptos-Tokens/main/logos/sUSDe.png"
   },
   {
-    assetName: "MOD",
+    assetName: "MOD (USD)",
     provider: "Move Dollar",
     token: "0x6f986d146e4a90b828d8c12c14b6f4e003fdff11a8eecceceb63744363eaac01::mod_coin::MOD",
     decimals: 100000000,

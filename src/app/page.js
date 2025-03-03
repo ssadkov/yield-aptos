@@ -15,7 +15,7 @@ import { generateMnemonicForUser } from "@/utils/mnemonic";
 const ReactMarkdown = dynamic(() => import("react-markdown"), { ssr: false });
 
 export default function Chat() {
-  const { messages, input, handleInputChange, handleSubmit, setMessages, append } = useChat({
+  const { messages, input, handleInputChange, handleSubmit, setMessages, append, status } = useChat({ // ✅ Добавлено status
     maxSteps: 5,
   });
 
@@ -87,9 +87,9 @@ export default function Chat() {
 
   const handleSupplyClick = (pool) => {
     console.log("🔄 Supply clicked for:", pool);
-  
+
     const userBalance = balances.find((b) => b.asset === pool.asset)?.balance || "0";
-  
+
     setMessages((prevMessages) => [
       ...prevMessages,
       {
@@ -100,7 +100,7 @@ export default function Chat() {
         pool,
       },
     ]);
-  
+
     handleInputChange({
       target: { value: `${userBalance}` },
     });
@@ -168,8 +168,6 @@ export default function Chat() {
 
   return (
     <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900">
-      {/* Добавляем отступ справа равный ширине сайдбара только на lg экранах
-          Добавляем отступ сверху для мобильных устройств */}
       <div className="flex-1 lg:ml-80 flex flex-col items-center justify-center px-4 pt-16 lg:pt-4">
         <Card className="w-full max-w-3xl shadow-lg bg-white dark:bg-gray-800 flex flex-col h-[calc(100vh-5rem)]">
           <CardContent className="p-6 flex flex-col flex-grow overflow-hidden">
@@ -212,11 +210,18 @@ export default function Chat() {
               <div ref={messagesEndRef} />
             </div>
 
-            <form onSubmit={handleSubmitWithUserData} className="flex gap-2 p-4 border-t">
-              <Input className="flex-1 p-2 border rounded-lg" value={input} placeholder="Type a message" onChange={handleInputChange} />
-              <Button type="submit" className="bg-black text-white">Send</Button>
-            </form>
+            {status === "submitted" || status === "streaming" ? ( // ✅ Показываем GIF и текст во время обработки
+              <div className="flex items-center justify-center gap-2">
+                <img src="/20250304_0256_Futuristic Crypto .gif" alt="AI is thinking..." />
+                <p className="text-gray-500 dark:text-gray-400"> Yield-AI is thinking...</p>
+              </div>
+            ) : null}
 
+
+            <form onSubmit={handleSubmitWithUserData} className="flex gap-2 p-4 border-t">
+              <Input className="flex-1 p-2 border rounded-lg" value={input} placeholder="Type a message" onChange={handleInputChange} disabled={status === "submitted" || status === "streaming"} />
+              <Button type="submit" className="bg-black text-white" disabled={status === "submitted" || status === "streaming"}>Send</Button>
+            </form>
           </CardContent>
         </Card>
       </div>

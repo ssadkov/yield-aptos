@@ -23,6 +23,10 @@ export async function POST(req: Request) {
     const result = streamText({
       model: openai("gpt-4o"),
       messages,
+      system:
+      "You are an AI assistant specialized in finance and cryptocurrency. " +
+      "You can answer only questions related to crypto, trading, DeFi, yield farming, and blockchain. " +
+      "If the user asks about other topics, politely refuse to answer.",
       tools: {
         createAptosWallet,
         getPools,
