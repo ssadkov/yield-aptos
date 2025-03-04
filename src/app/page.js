@@ -40,6 +40,7 @@ export default function Chat() {
         fetchBalances(storedAddress);
       }
     }
+    document.title = "Yield-A | AI Yield Optimizer on Aptos";
   }, []);
 
   const fetchBalances = async (address) => {
