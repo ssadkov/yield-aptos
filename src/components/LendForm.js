@@ -1,16 +1,19 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
-export default function LendForm({ token, amount, onLend }) {
+export default function LendForm({ protocol, token, amount, onLend }) {
   const [isLending, setIsLending] = useState(false);
 
   const handleLend = async () => {
     setIsLending(true); // Блокируем кнопку
-    await onLend(token, amount, setIsLending); // Вызываем переданную функцию
+    await onLend(protocol, token, amount, setIsLending); // Вызываем переданную функцию
   };
 
   return (
     <div className="p-4 border border-gray-400 rounded-md bg-gray-100 dark:bg-gray-800">
+      <p className="text-gray-900 dark:text-white">
+        <strong>Protocol:</strong> {protocol}
+      </p>
       <p className="text-gray-900 dark:text-white">
         <strong>Token:</strong> {token}
       </p>
@@ -22,7 +25,7 @@ export default function LendForm({ token, amount, onLend }) {
         onClick={handleLend}
         disabled={isLending} // Блокируем кнопку во время запроса
       >
-        {isLending ? "⏳ Processing..." : "Lend"}
+        {isLending ? "⏳ Processing..." : `Lend on ${protocol}`}
       </Button>
     </div>
   );

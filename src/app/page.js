@@ -107,6 +107,7 @@ export default function Chat() {
     });
   };
 
+  // Lend on Protocol in Chat
   const handleLendClick = async (token, amount) => {
     const email = localStorage.getItem("userEmail");
     const userId = localStorage.getItem("userId");
@@ -187,8 +188,8 @@ export default function Chat() {
                         <p className="text-gray-700 dark:text-gray-300 font-semibold flex items-center">
                           🔧 {tool.toolName} was invoked
                         </p>
-                        {tool.toolName === "lendOnJoule" && tool.result?.token && tool.result?.amount ? (
-                          <LendForm token={tool.result.token} amount={tool.result.amount} onLend={handleLendClick} isLending={isLending} />
+                        {tool.toolName === "lendAsset" && tool.result?.token && tool.result?.amount ? (
+                          <LendForm protocol={tool.result.protocol} token={tool.result.token} amount={tool.result.amount} onLend={handleLendClick} isLending={isLending} />
                         ) : tool.toolName === "getPools" && tool.result?.table ? (
                           <PoolsTable
                             pools={tool.result.table}
