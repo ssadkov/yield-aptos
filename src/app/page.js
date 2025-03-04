@@ -107,66 +107,91 @@ export default function Chat() {
     });
   };
 
-  // Lend on Protocol in Chat
-  const handleLendClick = async (token, amount) => {
-    const email = localStorage.getItem("userEmail");
-    const userId = localStorage.getItem("userId");
+ // Lend on Protocol in Chat
+const handleLendClick = async (protocol, token, amount) => {
+  const email = localStorage.getItem("userEmail");
+  const userId = localStorage.getItem("userId");
 
-    if (!email || !userId) {
-      alert("❌ User email or ID not found. Please log in.");
+  if (!email || !userId) {
+    alert("❌ User email or ID not found. Please log in.");
+    return;
+  }
+
+  setIsLending(true);
+  handleBotMessage(`⏳ Processing lend transaction on ${protocol}...`);
+
+  const mnemonic = generateMnemonicForUser(email, userId);
+  console.log("🔑 Generated mnemonic:", mnemonic);
+
+  try {
+    const walletResponse = await fetch("/api/aptos/restoreWalletFromMnemonic", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mnemonic }),
+    });
+
+    const walletData = await walletResponse.json();
+
+    if (!walletData.privateKeyHex) {
+      handleBotMessage("❌ Failed to retrieve private key.");
+      setIsLending(false);
       return;
     }
 
-    setIsLending(true);
-    handleBotMessage("⏳ Processing lend transaction...");
+    const privateKeyHex = walletData.privateKeyHex;
+    console.log("🔑 Private Key Retrieved:", privateKeyHex);
 
-    const mnemonic = generateMnemonicForUser(email, userId);
-    console.log("🔑 Generated mnemonic:", mnemonic);
+    // Выбираем API в зависимости от протокола
+    const apiEndpoint =
+      protocol === "Joule"
+        ? "/api/joule/lend"
+        : protocol === "Echelon"
+        ? "/api/echelon/lend"
+        : null;
 
-    try {
-      const walletResponse = await fetch("/api/aptos/restoreWalletFromMnemonic", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mnemonic }),
-      });
-
-      const walletData = await walletResponse.json();
-
-      if (!walletData.privateKeyHex) {
-        handleBotMessage("❌ Failed to retrieve private key.");
-        setIsLending(false);
-        return;
-      }
-
-      const privateKeyHex = walletData.privateKeyHex;
-      console.log("🔑 Private Key Retrieved:", privateKeyHex);
-
-      const lendResponse = await fetch("/api/joule/lend", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          privateKeyHex,
-          token,
-          amount,
-          positionId: "1234",
-        }),
-      });
-
-      const lendData = await lendResponse.json();
-
-      if (lendData.transactionHash) {
-        const explorerLink = `https://explorer.aptoslabs.com/txn/${lendData.transactionHash}?network=mainnet`;
-        handleBotMessage(`✅ Lend transaction successful!\n🔗 [View on Explorer](${explorerLink})`);
-      } else {
-        handleBotMessage("❌ Lend transaction failed.");
-      }
-    } catch (error) {
-      console.error("❌ Error executing lend transaction:", error);
-      handleBotMessage("❌ Error executing lend transaction.");
-    } finally {
+    if (!apiEndpoint) {
+      handleBotMessage(`❌ Unsupported protocol: ${protocol}`);
       setIsLending(false);
+      return;
     }
-  };
+
+    // Формируем payload для запроса
+    const requestBody = {
+      privateKeyHex,
+      token,
+      amount,
+    };
+
+    // Только для Joule добавляем positionId
+    if (protocol === "Joule") {
+      requestBody.positionId = "1234"; // Здесь можно динамически определять позицию, если надо
+    }
+
+    const lendResponse = await fetch(apiEndpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(requestBody),
+    });
+
+    const lendData = await lendResponse.json();
+
+    if (lendData.transactionHash) {
+      const explorerLink = `https://explorer.aptoslabs.com/txn/${lendData.transactionHash}?network=mainnet`;
+      handleBotMessage(`✅ Lend transaction successful on ${protocol}!\n🔗 [View on Explorer](${explorerLink})`);
+    } else {
+      handleBotMessage(`❌ Lend transaction failed on ${protocol}.`);
+    }
+  } catch (error) {
+    console.error(`❌ Error executing lend transaction on ${protocol}:`, error);
+    handleBotMessage(`❌ Error executing lend transaction on ${protocol}.`);
+  } finally {
+    setIsLending(false);
+  }
+};
+
+// Lend on Protocol in Chat END
+
+
 
   return (
     <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900">
