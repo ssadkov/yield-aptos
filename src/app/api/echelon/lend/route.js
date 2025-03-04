@@ -17,7 +17,7 @@ const aptos = new Aptos(aptosConfig);
 async function getPoolAddress(token) {
     try {
         console.log("🔎 Fetching pool address for token:", token);
-        const response = await fetch("http://localhost:3000/api/echelon/markets");
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/echelon/markets`);
         
         if (!response.ok) {
             throw new Error(`Failed to fetch Echelon markets: ${response.statusText}`);
