@@ -2,7 +2,6 @@ import { openai } from "@ai-sdk/openai";
 import { streamText } from "ai";
 import createAptosWallet from "@/app/api/chat/tools/createAptosWallet";
 import getPools from "@/app/api/chat/tools/getPools";
-// import lendOnJoule from "@/app/api/chat/tools/lendOnJoule";
 import lendAsset from "@/app/api/chat/tools/lendAsset";
 
 export const maxDuration = 30;
