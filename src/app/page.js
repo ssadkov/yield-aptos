@@ -221,6 +221,8 @@ const handleLendClick = async (protocol, token, amount) => {
                             balances={balances}
                             onSupplyClick={handleSupplyClick}
                             onBotMessage={handleBotMessage}
+                            setMessages={setMessages}
+                            handleInputChange={handleInputChange}
                           />
                         ) : (
                           <pre className="whitespace-pre-wrap break-words overflow-x-auto w-full">
