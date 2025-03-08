@@ -50,9 +50,9 @@ export default function PoolsTable({ pools, balances, onSupplyClick, onBotMessag
                 id: nanoid(),
                 role: "assistant",
                 type: "form",
-                content: `💰 You selected ${pool.asset} (provider: ${pool.provider}, token: ${pool.token}) with balance 0.\n` +
-                         `Available token for swap: ${availableToken.asset} (provider: ${availableToken.provider}, token: ${availableToken.token})\n` +
-                         `🔗 Available balance: ${availableTokenBalance}`,
+                content:  `Swap: ${availableToken.asset} (provider: ${availableToken.provider},from token: ${availableToken.token})\n` +
+                          `💰 To this asset ${pool.asset} (provider: ${pool.provider}, to token: ${pool.token}) for lending on ${pool.protocol}.\n` +
+                          `🔗 Enter amount for swapping (all by default)`,
                 pool,
             },
         ]);

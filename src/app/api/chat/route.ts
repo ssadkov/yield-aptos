@@ -3,6 +3,7 @@ import { streamText } from "ai";
 import createAptosWallet from "@/app/api/chat/tools/createAptosWallet";
 import getPools from "@/app/api/chat/tools/getPools";
 import lendAsset from "@/app/api/chat/tools/lendAsset";
+import swapAndLendAsset from "./tools/swapLendAsset";
 
 export const maxDuration = 30;
 
@@ -32,6 +33,7 @@ export async function POST(req: Request) {
         getPools,
         //lendOnJoule,
         lendAsset,
+        swapAndLendAsset,
       },
     });
 
