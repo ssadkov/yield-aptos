@@ -11,7 +11,7 @@ const lendAsset = tool({
     asset: z.string().describe("The asset name (e.g., USDC, APT, BTC, ETH)."),
     provider: z.string().optional().describe("The provider name (only required if token type is not provided)."),
     amount: z.number().describe("The exact amount of the asset to lend."),
-    tokenType: z.string().optional().describe("The token type (if already available, provider and asset is not required)."),
+    tokenType: z.string().optional().describe("The token type (if already available, provider is not required and asset is not required)."),
   }),
   execute: async ({ protocol, asset, provider, amount, tokenType }) => {
     try {

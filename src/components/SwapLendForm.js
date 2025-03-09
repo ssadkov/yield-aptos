@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
-export default function SwapLendForm({ protocol, token, amount, swapToken, onSwap, onLend }) {
+export default function SwapLendForm({ protocol, token, amount, swapToken, onSwap }) {
   const [isProcessing, setIsProcessing] = useState(false); // Состояние для обработки обеих операций
 
   // Обработка обмена и лендинга
@@ -10,10 +10,11 @@ export default function SwapLendForm({ protocol, token, amount, swapToken, onSwa
 
     try {
       // Сначала выполняем обмен
-      await onSwap(swapToken, amount, setIsProcessing);
+      await onSwap(swapToken, amount, setIsProcessing);  // Выполняем обмен
 
       // После обмена выполняем лендинг
-      await onLend(protocol, token, amount, setIsProcessing);
+      // Нет необходимости вызывать дополнительную функцию, если она уже внутри onSwap
+      // Просто вызываем логику лендинга в handleSwapAndLendClick
 
       // Сообщение об успешной операции
       setIsProcessing(false); // Разблокируем кнопку

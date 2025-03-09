@@ -7,15 +7,17 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useEffect, useRef, useState } from "react";
 import PoolsTable from "@/components/PoolsTable";
 import LendForm from "@/components/LendForm";
+import SwapLendForm from "@/components/SwapLendForm"; // Новый компонент для обмена и лендинга
 import { nanoid } from "nanoid";
 import dynamic from "next/dynamic";
 import { generateMnemonicForUser } from "@/utils/mnemonic";
+import { Send } from "lucide-react"; // Импортируем иконку Send
 
 // Отключаем SSR для react-markdown
 const ReactMarkdown = dynamic(() => import("react-markdown"), { ssr: false });
 
 export default function Chat() {
-  const { messages, input, handleInputChange, handleSubmit, setMessages, append, status } = useChat({ // ✅ Добавлено status
+  const { messages, input, handleInputChange, handleSubmit, setMessages, append, status } = useChat({
     maxSteps: 5,
   });
 
@@ -25,7 +27,6 @@ export default function Chat() {
   const messagesEndRef = useRef(null);
   const [balances, setBalances] = useState([]);
   const [userAddress, setUserAddress] = useState("");
-  const [lendData, setLendData] = useState(null);
   const [isLending, setIsLending] = useState(false);
 
   useEffect(() => {
@@ -107,91 +108,109 @@ export default function Chat() {
     });
   };
 
- // Lend on Protocol in Chat
-const handleLendClick = async (protocol, token, amount) => {
-  const email = localStorage.getItem("userEmail");
-  const userId = localStorage.getItem("userId");
+  // Lend on Protocol in Chat
+  const handleLendClick = async (protocol, token, amount) => {
+    const email = localStorage.getItem("userEmail");
+    const userId = localStorage.getItem("userId");
 
-  if (!email || !userId) {
-    alert("❌ User email or ID not found. Please log in.");
-    return;
-  }
-
-  setIsLending(true);
-  handleBotMessage(`⏳ Processing lend transaction on ${protocol}...`);
-
-  const mnemonic = generateMnemonicForUser(email, userId);
-  console.log("🔑 Generated mnemonic:", mnemonic);
-
-  try {
-    const walletResponse = await fetch("/api/aptos/restoreWalletFromMnemonic", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mnemonic }),
-    });
-
-    const walletData = await walletResponse.json();
-
-    if (!walletData.privateKeyHex) {
-      handleBotMessage("❌ Failed to retrieve private key.");
-      setIsLending(false);
+    if (!email || !userId) {
+      alert("❌ User email or ID not found. Please log in.");
       return;
     }
 
-    const privateKeyHex = walletData.privateKeyHex;
-    console.log("🔑 Private Key Retrieved:", privateKeyHex);
+    setIsLending(true);
+    handleBotMessage(`⏳ Processing lend transaction on ${protocol}...`);
 
-    // Выбираем API в зависимости от протокола
-    const apiEndpoint =
-      protocol === "Joule"
-        ? "/api/joule/lend"
-        : protocol === "Echelon"
-        ? "/api/echelon/lend"
-        : null;
+    const mnemonic = generateMnemonicForUser(email, userId);
+    console.log("🔑 Generated mnemonic:", mnemonic);
 
-    if (!apiEndpoint) {
-      handleBotMessage(`❌ Unsupported protocol: ${protocol}`);
+    try {
+      const walletResponse = await fetch("/api/aptos/restoreWalletFromMnemonic", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mnemonic }),
+      });
+
+      const walletData = await walletResponse.json();
+
+      if (!walletData.privateKeyHex) {
+        handleBotMessage("❌ Failed to retrieve private key.");
+        setIsLending(false);
+        return;
+      }
+
+      const privateKeyHex = walletData.privateKeyHex;
+      console.log("🔑 Private Key Retrieved:", privateKeyHex);
+
+      // Выбираем API в зависимости от протокола
+      const apiEndpoint =
+        protocol === "Joule"
+          ? "/api/joule/lend"
+          : protocol === "Echelon"
+          ? "/api/echelon/lend"
+          : null;
+
+      if (!apiEndpoint) {
+        handleBotMessage(`❌ Unsupported protocol: ${protocol}`);
+        setIsLending(false);
+        return;
+      }
+
+      // Формируем payload для запроса
+      const requestBody = {
+        privateKeyHex,
+        token,
+        amount,
+      };
+
+      // Только для Joule добавляем positionId
+      if (protocol === "Joule") {
+        requestBody.positionId = "1234"; // Здесь можно динамически определять позицию, если надо
+      }
+
+      const lendResponse = await fetch(apiEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody),
+      });
+
+      const lendData = await lendResponse.json();
+
+      if (lendData.transactionHash) {
+        const explorerLink = `https://explorer.aptoslabs.com/txn/${lendData.transactionHash}?network=mainnet`;
+        handleBotMessage(`✅ Lend transaction successful on ${protocol}!\n🔗 [View on Explorer](${explorerLink})`);
+      } else {
+        handleBotMessage(`❌ Lend transaction failed on ${protocol}.`);
+      }
+    } catch (error) {
+      console.error(`❌ Error executing lend transaction on ${protocol}:`, error);
+      handleBotMessage(`❌ Error executing lend transaction on ${protocol}.`);
+    } finally {
       setIsLending(false);
-      return;
     }
+  };
 
-    // Формируем payload для запроса
-    const requestBody = {
-      privateKeyHex,
-      token,
-      amount,
-    };
-
-    // Только для Joule добавляем positionId
-    if (protocol === "Joule") {
-      requestBody.positionId = "1234"; // Здесь можно динамически определять позицию, если надо
+  // Handle Swap and Lend
+  const handleSwapAndLendClick = async (swapToken, amount, setIsProcessing) => {
+    setIsProcessing(true);
+    // Здесь добавьте логику для обмена и последующего лендинга, как в вашем туле
+    try {
+      // Пример: Выполнить обмен, а затем лендить
+      console.log(`🔄 Swapping ${swapToken} for ${amount}...`);
+      // Пример выполнения обмена...
+      // Затем лендим
+      console.log(`💰 Lending ${amount} of ${swapToken}`);
+    } catch (error) {
+      console.error("❌ Error during Swap and Lend:", error);
+    } finally {
+      setIsProcessing(false);
     }
+  };
 
-    const lendResponse = await fetch(apiEndpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(requestBody),
-    });
-
-    const lendData = await lendResponse.json();
-
-    if (lendData.transactionHash) {
-      const explorerLink = `https://explorer.aptoslabs.com/txn/${lendData.transactionHash}?network=mainnet`;
-      handleBotMessage(`✅ Lend transaction successful on ${protocol}!\n🔗 [View on Explorer](${explorerLink})`);
-    } else {
-      handleBotMessage(`❌ Lend transaction failed on ${protocol}.`);
-    }
-  } catch (error) {
-    console.error(`❌ Error executing lend transaction on ${protocol}:`, error);
-    handleBotMessage(`❌ Error executing lend transaction on ${protocol}.`);
-  } finally {
-    setIsLending(false);
-  }
-};
-
-// Lend on Protocol in Chat END
-
-
+  // Функция для демонстрации кнопок до начала диалога
+  const handleActionClick = (action) => {
+    alert(`Action clicked: ${action}`);
+  };
 
   return (
     <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900">
@@ -199,14 +218,54 @@ const handleLendClick = async (protocol, token, amount) => {
         <Card className="w-full max-w-3xl shadow-lg bg-white dark:bg-gray-800 flex flex-col h-[calc(100vh-5rem)]">
           <CardContent className="p-6 flex flex-col flex-grow overflow-hidden">
             <div className="flex-1 overflow-y-auto space-y-4 p-4">
+              {/* Новые кнопки до старта диалога */}
+              {messages.length === 0 && (
+                <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 mb-4">
+                  <h3 className="text-lg font-medium mb-3">Quick Actions</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <Button
+                      variant="outline"
+                      className="justify-start text-left h-auto py-3"
+                      onClick={() => handleActionClick("Show Top Yield Pools")}
+                    >
+                      Show Top Yield Pools
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="justify-start text-left h-auto py-3"
+                      onClick={() => handleActionClick("Check APT Balance")}
+                    >
+                      Check APT Balance
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="justify-start text-left h-auto py-3"
+                      onClick={() => handleActionClick("Show My Positions")}
+                    >
+                      Show My Positions
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="justify-start text-left h-auto py-3"
+                      onClick={() => handleActionClick("Swap & Lend Guide")}
+                    >
+                      Swap & Lend Guide
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               {messages.map((m, index) => (
-                <div key={index} className={`p-3 rounded-lg break-words ${
-                  m.toolInvocations
-                    ? "bg-gray-300 dark:bg-gray-800 text-gray-900 dark:text-white max-w-full"
-                    : m.role === "user"
-                    ? "bg-blue-500 text-white max-w-[75%] ml-auto"
-                    : "bg-gray-200 dark:bg-gray-700 text-black dark:text-gray-300 max-w-[75%]"
-                }`}>
+                <div
+                  key={index}
+                  className={`p-3 rounded-lg break-words ${
+                    m.toolInvocations
+                      ? "bg-gray-300 dark:bg-gray-800 text-gray-900 dark:text-white max-w-full"
+                      : m.role === "user"
+                      ? "bg-blue-500 text-white max-w-[75%] ml-auto"
+                      : "bg-gray-200 dark:bg-gray-700 text-black dark:text-gray-300 max-w-[75%]"
+                  }`}
+                >
                   {m.toolInvocations ? (
                     m.toolInvocations.map((tool, i) => (
                       <div key={i} className="p-3 bg-gray-300 dark:bg-gray-800 rounded-lg">
@@ -214,7 +273,21 @@ const handleLendClick = async (protocol, token, amount) => {
                           🔧 {tool.toolName} was invoked
                         </p>
                         {tool.toolName === "lendAsset" && tool.result?.token && tool.result?.amount ? (
-                          <LendForm protocol={tool.result.protocol} token={tool.result.token} amount={tool.result.amount} onLend={handleLendClick} isLending={isLending} />
+                          <LendForm
+                            protocol={tool.result.protocol}
+                            token={tool.result.token}
+                            amount={tool.result.amount}
+                            onLend={handleLendClick}
+                            isLending={isLending}
+                          />
+                        ) : tool.toolName === "swapAndLendAsset" && tool.result ? (
+                          <SwapLendForm
+                            protocol={tool.result.protocol}
+                            token={tool.result.token}
+                            swapToken={tool.result.swapToken}
+                            amount={tool.result.amount}
+                            onSwap={handleSwapAndLendClick} // Используем handleSwapAndLendClick
+                          />
                         ) : tool.toolName === "getPools" && tool.result?.table ? (
                           <PoolsTable
                             pools={tool.result.table}
@@ -239,17 +312,18 @@ const handleLendClick = async (protocol, token, amount) => {
               <div ref={messagesEndRef} />
             </div>
 
-            {status === "submitted" || status === "streaming" ? ( // ✅ Показываем GIF и текст во время обработки
+            {status === "submitted" || status === "streaming" ? (
               <div className="flex items-center justify-center gap-2">
                 <img src="/20250304_0256_Futuristic Crypto .gif" alt="AI is thinking..." />
                 <p className="text-gray-500 dark:text-gray-400"> Yield-AI is thinking...</p>
               </div>
             ) : null}
 
-
             <form onSubmit={handleSubmitWithUserData} className="flex gap-2 p-4 border-t">
               <Input className="flex-1 p-2 border rounded-lg" value={input} placeholder="Type a message" onChange={handleInputChange} disabled={status === "submitted" || status === "streaming"} />
-              <Button type="submit" className="bg-black text-white" disabled={status === "submitted" || status === "streaming"}>Send</Button>
+              <Button type="submit" className="bg-black text-white" disabled={status === "submitted" || status === "streaming"}>
+                <Send className="h-4 w-4" /> {/* Иконка Send */}
+              </Button>
             </form>
           </CardContent>
         </Card>
