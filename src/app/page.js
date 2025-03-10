@@ -12,6 +12,8 @@ import { nanoid } from "nanoid";
 import dynamic from "next/dynamic";
 import { generateMnemonicForUser } from "@/utils/mnemonic";
 import { Send } from "lucide-react"; // Импортируем иконку Send
+import BestLendStrategy from "@/components/BestLendStrategy"; // Подключаем компонент BestLendStrategy
+
 
 // Отключаем SSR для react-markdown
 const ReactMarkdown = dynamic(() => import("react-markdown"), { ssr: false });
@@ -47,10 +49,17 @@ export default function Chat() {
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
 
+
   const messagesEndRef = useRef(null);
   const [balances, setBalances] = useState([]);
   const [userAddress, setUserAddress] = useState("");
   const [isLending, setIsLending] = useState(false);
+  const [lendSuccess, setLendSuccess] = useState(false);
+  const [lendProtocol, setLendProtocol] = useState(null);
+  const [lendAmount, setLendAmount] = useState(null);
+  const [lendToken, setLendToken] = useState(null);
+
+
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -188,7 +197,7 @@ export default function Chat() {
 
       // Только для Joule добавляем positionId
       if (protocol === "Joule") {
-        requestBody.positionId = "1234"; // Здесь можно динамически определять позицию, если надо
+        requestBody.positionId = "1"; // Здесь можно динамически определять позицию, если надо
       }
 
       const lendResponse = await fetch(apiEndpoint, {
@@ -202,6 +211,15 @@ export default function Chat() {
       if (lendData.transactionHash) {
         const explorerLink = `https://explorer.aptoslabs.com/txn/${lendData.transactionHash}?network=mainnet`;
         handleBotMessage(`✅ Lend transaction successful on ${protocol}!\n🔗 [View on Explorer](${explorerLink})`);
+
+              // Заполняем данные для BestLendStrategy
+        setLendProtocol(protocol);
+        setLendToken(token);
+        setLendAmount(amount);
+
+        
+        setLendSuccess(true); // Активируем отображение BestLendStrategy
+
       } else {
         handleBotMessage(`❌ Lend transaction failed on ${protocol}.`);
       }
@@ -254,7 +272,7 @@ export default function Chat() {
 
     try {
       // Call the tool directly without using AI
-      const response = await fetch("/api/direct-tools", {
+      const response = await fetch("/api/chat/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -314,9 +332,29 @@ export default function Chat() {
                   {action.label}
                 </button>
               ))}
-            </div>
+               </div>
                 </div>
               )}
+
+              {/* Если лендинг успешен, отображаем форму BestLendStrategy */}
+              {lendSuccess && (
+                <BestLendStrategy
+                  protocol={lendProtocol} // Передаем протокол
+                  token={lendToken} // Передаем токен
+                  amount={lendAmount} // Передаем количество
+                  onActivateStrategy={() => {
+                    // Логика активации стратегии (например, вызвать API для активации)
+                    alert("BestLend strategy activated!");
+                    setLendSuccess(false); // Сброс состояния после активации
+                  }}
+                  onCancel={() => {
+                    // Логика отмены активации стратегии
+                    alert("BestLend strategy canceled!");
+                    setLendSuccess(false); // Сброс состояния после отмены
+                  }}
+                />
+              )}
+
 
               {messages.map((m, index) => (
                 <div

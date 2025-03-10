@@ -183,20 +183,21 @@ export default function Sidebar() {
                 </div>
 
                 {positions.length > 0 && (
-                  <div className="w-full mt-6 text-sm">
-                    <h3 className="text-lg font-semibold text-left">Positions on Joule</h3>
-                    <ul className="space-y-2 mt-2">
-                      {positions.map((pos, index) => (
-                        <li key={index} className="flex justify-between p-2 bg-gray-200 rounded-md">
-                          <span>
-                            {pos.token} {pos.provider && <span className="text-xs text-gray-500">({pos.provider})</span>}
-                          </span>
-                          <span className="font-bold">{pos.amount}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+                <div className="w-full mt-6 text-sm">
+                  <h3 className="text-lg font-semibold text-left">Positions on Joule</h3>
+                  <ul className="space-y-2 mt-2">
+                    {positions.filter(pos => pos.amount > 0).map((pos, index) => (
+                      <li key={index} className="flex justify-between p-2 bg-gray-200 rounded-md">
+                        <span>
+                          {pos.token} {pos.provider && <span className="text-xs text-gray-500">({pos.provider})</span>}
+                        </span>
+                        <span className="font-bold">{pos.amount}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
 
                 <Button onClick={() => signOut()} className="w-full mt-4 bg-gray-500 text-white">
                   Sign out
