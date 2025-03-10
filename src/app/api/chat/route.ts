@@ -4,6 +4,7 @@ import createAptosWallet from "@/app/api/chat/tools/createAptosWallet";
 import getPools from "@/app/api/chat/tools/getPools";
 import lendAsset from "@/app/api/chat/tools/lendAsset";
 import swapAndLendAsset from "./tools/swapLendAsset";
+import bestLend from "./tools/bestLendAsset";
 
 export const maxDuration = 30;
 
@@ -34,6 +35,7 @@ export async function POST(req: Request) {
         //lendOnJoule,
         lendAsset,
         swapAndLendAsset,
+        bestLend,
       },
     });
 

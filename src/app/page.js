@@ -16,6 +16,29 @@ import { Send } from "lucide-react"; // Импортируем иконку Send
 // Отключаем SSR для react-markdown
 const ReactMarkdown = dynamic(() => import("react-markdown"), { ssr: false });
 
+const presetActions = [
+  {
+    label: "Show Top Yield Pools",
+    tool: "getPools",
+    params: { limit: 5, sortBy: "apy" },
+  },
+  {
+    label: "Create new Aptos wallet",
+    tool: "createAptosWallet",
+    params: { },
+  },
+  {
+    label: "Show My Positions",
+    tool: "getPositions",
+    params: {},
+  },
+  {
+    label: "Swap & Lend Guide",
+    tool: "getSwapLendOptions",
+    params: { minApy: 5 },
+  },
+]
+
 export default function Chat() {
   const { messages, input, handleInputChange, handleSubmit, setMessages, append, status } = useChat({
     maxSteps: 5,
@@ -98,7 +121,7 @@ export default function Chat() {
         id: nanoid(),
         role: "assistant",
         type: "form",
-        content: `💰 Enter the amount to supply for ${pool.asset} (${pool.provider}) on ${pool.protocol} \n\n 🔗 Token type: ${pool.token}`,
+        content: `💰 Enter the amount to supply for ${pool.asset} (${pool.provider}) on ${pool.protocol} \n\n 🔗 Token type: ${pool.token} with APR: ${pool.totalAPY}`,
         pool,
       },
     ]);
@@ -208,9 +231,68 @@ export default function Chat() {
   };
 
   // Функция для демонстрации кнопок до начала диалога
-  const handleActionClick = (action) => {
-    alert(`Action clicked: ${action}`);
-  };
+  const handleDirectToolAction = async (toolName, params) => {
+    const email = localStorage.getItem("userEmail")
+    const userId = localStorage.getItem("userId")
+
+    if (!email || !userId) {
+      alert("❌ User email or ID not found. Please log in.")
+      return
+    }
+
+    // Add user message showing what action they took
+    const userMessage = {
+      id: nanoid(),
+      role: "user",
+      content: `Show me ${toolName.replace(/([A-Z])/g, " $1").toLowerCase()} ${JSON.stringify(params)}`.trim(),
+    }
+
+    setMessages((prevMessages) => [...prevMessages, userMessage])
+
+    // Show loading message
+    handleBotMessage("⏳ Processing your request...")
+
+    try {
+      // Call the tool directly without using AI
+      const response = await fetch("/api/direct-tools", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tool: toolName,
+          params,
+          email,
+          userId,
+        }),
+      })
+
+      if (!response.ok) throw new Error("Tool execution failed")
+
+      const result = await response.json()
+
+      // Remove the loading message
+      setMessages((prev) => prev.filter((msg) => msg.content !== "⏳ Processing your request..."))
+
+      // Add the tool result as a special message type
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: nanoid(),
+          role: "assistant",
+          toolInvocations: [
+            {
+              toolName: toolName,
+              result: result.data,
+            },
+          ],
+        },
+      ])
+    } catch (error) {
+      console.error("❌ Error executing direct tool:", error)
+      // Remove the loading message and show error
+      setMessages((prev) => prev.filter((msg) => msg.content !== "⏳ Processing your request..."))
+      handleBotMessage("❌ Sorry, there was an error processing your request.")
+    }
+  }
 
   return (
     <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900">
@@ -223,35 +305,16 @@ export default function Chat() {
                 <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 mb-4">
                   <h3 className="text-lg font-medium mb-3">Quick Actions</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <Button
-                      variant="outline"
-                      className="justify-start text-left h-auto py-3"
-                      onClick={() => handleActionClick("Show Top Yield Pools")}
-                    >
-                      Show Top Yield Pools
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="justify-start text-left h-auto py-3"
-                      onClick={() => handleActionClick("Check APT Balance")}
-                    >
-                      Check APT Balance
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="justify-start text-left h-auto py-3"
-                      onClick={() => handleActionClick("Show My Positions")}
-                    >
-                      Show My Positions
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="justify-start text-left h-auto py-3"
-                      onClick={() => handleActionClick("Swap & Lend Guide")}
-                    >
-                      Swap & Lend Guide
-                    </Button>
-                  </div>
+                   {presetActions.map((action, index) => (
+                   <button
+                  key={index}
+                  className="bg-white dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-left p-3 rounded-lg shadow-sm transition-colors"
+                  onClick={() => handleDirectToolAction(action.tool, action.params)}
+                   >
+                  {action.label}
+                </button>
+              ))}
+            </div>
                 </div>
               )}
 
@@ -272,15 +335,16 @@ export default function Chat() {
                         <p className="text-gray-700 dark:text-gray-300 font-semibold flex items-center">
                           🔧 {tool.toolName} was invoked
                         </p>
-                        {tool.toolName === "lendAsset" && tool.result?.token && tool.result?.amount ? (
+                        {(tool.toolName === "lendAsset" || tool.toolName === "bestLend") && tool.result?.token && tool.result?.amount ? (
                           <LendForm
                             protocol={tool.result.protocol}
                             token={tool.result.token}
                             amount={tool.result.amount}
+                            apr={tool.result.apr} // Добавляем APR для bestLend
                             onLend={handleLendClick}
                             isLending={isLending}
                           />
-                        ) : tool.toolName === "swapAndLendAsset" && tool.result ? (
+                        )  : tool.toolName === "swapAndLendAsset" && tool.result ? (
                           <SwapLendForm
                             protocol={tool.result.protocol}
                             token={tool.result.token}

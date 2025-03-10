@@ -1,7 +1,13 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
-export default function LendForm({ protocol, token, amount, onLend }) {
+const formatAmount = (amount) => {
+  // Округляем до 6 знаков после запятой (или можно менять это число)
+  return Number(amount).toFixed(6).replace(/\.?0+$/, '');
+};
+
+// В вашем компоненте:
+export default function LendForm({ protocol, token, amount, onLend, apr }) {
   const [isLending, setIsLending] = useState(false);
 
   const handleLend = async () => {
@@ -18,8 +24,13 @@ export default function LendForm({ protocol, token, amount, onLend }) {
         <strong>Token:</strong> {token}
       </p>
       <p className="text-gray-900 dark:text-white">
-        <strong>Amount:</strong> {amount}
+        <strong>Amount:</strong> {formatAmount(amount)} {/* Форматируем amount */}
       </p>
+      {apr && (
+        <p className="text-gray-900 dark:text-white">
+          <strong>APR:</strong> {apr}
+        </p>
+      )}
       <Button
         className="mt-2 bg-green-500 text-white px-4 py-2 rounded disabled:opacity-50"
         onClick={handleLend}
