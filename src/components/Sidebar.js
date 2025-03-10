@@ -16,6 +16,8 @@ export default function Sidebar() {
   const [balances, setBalances] = useState([]);
   const [positions, setPositions] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [loadingStrategy, setLoadingStrategy] = useState({});
+
 
   useEffect(() => {
     if (session) {
@@ -82,6 +84,7 @@ export default function Sidebar() {
             token: formatTokenKey(pos.key),
             amount: formatAmount(pos.value),
             provider: getProvider(pos.key),
+            protocol: "Joule",
             tokenType: pos.key,
           }))
         );
@@ -117,9 +120,58 @@ export default function Sidebar() {
     address ? `${address.slice(0, 5)}.......${address.slice(-4)}` : "Loading...";
 
 
-  const handleBestLendStrategy = (pos) => {
-    alert(`BestLendStrategy=1\nToken: ${pos.token}\nAmount: ${pos.amount}\nProtocol: ${pos.protocol}\nTokenType: ${pos.tokenType}`);
+  const handleBestLendStrategy = async (pos) => {
+    if (!session) {
+      toast.error("You need to be signed in to save the strategy.");
+      return;
+    }
+  
+    // Включаем индикатор загрузки
+    setLoadingStrategy((prev) => ({ ...prev, [pos.token]: true }));
+
+    console.log("Sending data:", {
+      email: session?.user?.email,
+      userId: session?.user?.id,
+      tokenType: pos.tokenType,
+      protocol: pos.protocol,
+      amount: pos.amount,
+      startDate: new Date().toISOString(),
+      enabled: 1,
+      strategyType: "bestlend",
+    });
+    
+  
+    try {
+      const response = await fetch("/api/strategy/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: session.user.email,
+          userId: session.user.id,
+          tokenType: pos.tokenType,
+          protocol: pos.protocol,
+          amount: pos.amount,
+          startDate: new Date().toISOString(),
+          enabled: 1,
+          strategyType: "bestlend",
+        }),
+      });
+  
+      if (response.ok) {
+        toast.success("Strategy saved successfully!");
+      } else {
+        const errorData = await response.json();
+        toast.error(`Failed to save: ${errorData.error || "Unknown error"}`);
+      }
+    } catch (error) {
+      console.error("❌ Error saving strategy:", error);
+      toast.error("Error saving strategy.");
+    } finally {
+      // Отключаем индикатор загрузки
+      setLoadingStrategy((prev) => ({ ...prev, [pos.token]: false }));
+    }
   };
+  
   
 
   return (
@@ -197,9 +249,16 @@ export default function Sidebar() {
                                       {pos.token} {pos.provider && <span className="text-xs text-gray-500">({pos.provider})</span>}
                                     </span>
                                     <span className="font-bold text-right flex-1">{pos.amount}</span>
-                                    <button onClick={() => handleBestLendStrategy(pos)} className="ml-2 text-yellow-500 text-lg">
-                                    🚀
+                                    <button
+                                      onClick={() => handleBestLendStrategy(pos)}
+                                      className={`ml-2 text-gray-500 hover:text-yellow-500 text-lg ${
+                                        loadingStrategy[pos.token] ? "opacity-50 cursor-not-allowed" : ""
+                                      }`}
+                                      disabled={loadingStrategy[pos.token]}
+                                    >
+                                      {loadingStrategy[pos.token] ? "🔄" : "🚀"}
                                     </button>
+
                                   </li>
                                 ))}
                               </ul>
