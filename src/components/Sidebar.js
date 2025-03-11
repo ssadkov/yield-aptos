@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Menu, X, Copy, RefreshCw, Eye, ExternalLink } from "lucide-react";
+import { Menu, X, Copy, RefreshCw, Eye, Globe, LogOut } from "lucide-react";
 import { generateMnemonicForUser } from "@/utils/mnemonic";
 import toast, { Toaster } from "react-hot-toast";
 import JOULE_TOKENS from "@/app/api/joule/jouleTokens";
@@ -72,61 +72,92 @@ export default function Sidebar() {
     }
   };
 
-  const fetchUserPositions = async (address = aptosAddress) => {
+  const fetchUserPositions = async (address) => {
     if (!address) return;
-
+  
     try {
       console.log(`🔄 Fetching user positions for ${address}`);
-      const res = await fetch(`/api/joule/userPositions?address=${address}`);
-      const data = await res.json();
-
-        // Выводим userPositions в консоль
-  console.log("📊 Raw user positions:", data.userPositions);
-
-      if (data?.userPositions?.length > 0) {
-        const positionsData = data.userPositions[0].positions_map.data.flatMap((position) =>
-          position.value.lend_positions.data.map((pos) => ({
-            token: formatTokenKey(pos.key),
-            amount: formatAmount(pos.value),
-            provider: getProvider(pos.key),
-            protocol: "Joule",
-            tokenType: pos.key,
-          }))
+  
+      // Запрос данных по Joule
+      const resJoule = await fetch(`/api/joule/userPositions?address=${address}`);
+      const dataJoule = await resJoule.json();
+      console.log("📊 Raw Joule positions:", dataJoule.userPositions);
+  
+      let joulePositions = [];
+      if (dataJoule?.userPositions?.length > 0) {
+        joulePositions = dataJoule.userPositions[0].positions_map.data.flatMap((position) =>
+          position.value.lend_positions.data.map((pos) => {
+            const tokenData = getTokenData(pos.key);
+            return {
+              token: tokenData.assetName,
+              amount: formatAmount(pos.value, tokenData.decimals),
+              provider: tokenData.provider,
+              protocol: "Joule",
+              tokenType: pos.key,
+            };
+          })
         );
-        setPositions(positionsData);
-      } else {
-        setPositions([]);
       }
+  
+      // Запрос данных по Echelon
+      const echelonPositions = await fetchEchelonPositions(address);
+  
+          // Объединяем позиции
+    const positions = [...joulePositions, ...echelonPositions];
+
+    // ✅ Вывод итоговых позиций в консоль
+    console.log("📊 Final positions:", positions);
+    setPositions([...joulePositions, ...echelonPositions]);
+
+    return [];
+
     } catch (error) {
       console.error("❌ Error fetching positions:", error);
+      return [];
     }
   };
-
-  const formatTokenKey = (key) => {
-    // Заменяем "@" в начале на "0x" для корректного поиска
-    const formattedKey = key.startsWith("@") ? key.replace("@", "0x") : key;
   
-    // Ищем токен в JOULE_TOKENS
-    const tokenData = JOULE_TOKENS.find((t) => t.token === formattedKey);
+  const fetchEchelonPositions = async (address) => {
+    try {
+      console.log(`🔄 Fetching Echelon positions for ${address}`);
+      const res = await fetch(`/api/echelon/userPositions?address=${address}`);
+      const data = await res.json();
   
-    // Возвращаем assetName, если нашли, иначе сокращённый ключ
-    return tokenData ? tokenData.assetName : formattedKey.slice(0, 6) + "..." + formattedKey.slice(-6);
+      console.log("📊 Raw Echelon positions:", data.userPositions);
+  
+      if (!data?.userPositions?.length) return [];
+  
+      return data.userPositions.map((pos) => {
+        const tokenData = getTokenData(pos.coin);
+        return {
+          token: tokenData.assetName,
+          amount: formatAmount(pos.supply, tokenData.decimals),
+          provider: tokenData.provider,
+          protocol: "Echelon",
+          tokenType: pos.coin,
+        };
+      });
+    } catch (error) {
+      console.error("❌ Error fetching Echelon positions:", error);
+      return [];
+    }
   };
   
-  
-
-  const formatAmount = (value) => (parseFloat(value) / 1e6).toFixed(2);
-
-  const getProvider = (key) => {
-    // Заменяем "@" в начале на "0x" для корректного поиска
+  // Универсальная функция для получения данных токена (работает и для Joule, и для Echelon)
+  const getTokenData = (key) => {
     const formattedKey = key.startsWith("@") ? key.replace("@", "0x") : key;
+    const tokenData = JOULE_TOKENS.find((t) => t.token === formattedKey) || {};
   
-    // Ищем токен в JOULE_TOKENS
-    const tokenData = JOULE_TOKENS.find((t) => t.token === formattedKey);
-  
-    // Возвращаем provider, если нашли, иначе — "Unknown Provider"
-    return tokenData ? tokenData.provider : "Unknown Provider";
+    return {
+      assetName: tokenData.assetName || formattedKey.slice(0, 6) + "..." + formattedKey.slice(-6),
+      provider: tokenData.provider || "Unknown Provider",
+      decimals: tokenData.decimals || 1e6, // По умолчанию 1e6, если не найдено в JOULE_TOKENS
+    };
   };
+  
+  // Форматируем сумму токенов с учётом decimals
+  const formatAmount = (value, decimals) => (parseFloat(value) / decimals).toFixed(2);
+  
   
 
   const copyToClipboard = () => {
@@ -190,7 +221,8 @@ export default function Sidebar() {
     }
   };
   
-  
+  console.log("📊 Rendered positions in UI:", positions);
+
 
   return (
     <>
@@ -217,7 +249,17 @@ export default function Sidebar() {
 
             {session ? (
               <div className="w-full text-center">
-                <p className="text-sm mb-2">{session.user.email}</p>
+                <div className="flex items-center justify-center w-full mb-2 relative">
+                <p className="text-sm truncate mx-auto">{session.user.email}</p>
+                <button 
+                  onClick={() => signOut()} 
+                  className="absolute right-0 p-1 rounded-md bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500 transition"
+                  title="Sign out"
+                >
+                  <LogOut size={18} className="text-gray-700 dark:text-gray-300" />
+                </button>
+              </div>
+
 
                 <div className="flex items-center justify-between w-full bg-gray-200 dark:bg-gray-700 p-3 rounded-lg mt-4">
                   <span className="truncate text-sm">{formatAddress(aptosAddress)}</span>
@@ -231,13 +273,15 @@ export default function Sidebar() {
                       rel="noopener noreferrer"
                       className="p-2 rounded-lg bg-gray-300 dark:bg-gray-600"
                     >
-                      <ExternalLink size={20} />
+                      <Globe size={20} />
                     </a>
                   </div>
                 </div>
+
                 <Button className="w-full mt-4 flex items-center gap-2 bg-gray-500 text-white" onClick={() => toast(`Mnemonic: ${mnemonic}`)}>
                   Show Mnemonic <Eye size={18} />
                 </Button>
+
 
                 <div className="w-full mt-4 text-sm">
                   <div className="flex justify-between items-center mb-2">
@@ -258,36 +302,56 @@ export default function Sidebar() {
                   </ul>
                 </div>
                 {positions.length > 0 && (
-                              <div className="w-full mt-6 text-sm">
-                              <h3 className="text-lg font-semibold text-left">Positions on Joule</h3>
-                              <ul className="space-y-2 mt-2">
-                                {positions.filter(pos => pos.amount > 0).map((pos, index) => (
-                                  <li key={index} className="flex items-center justify-between p-3 bg-gray-200 rounded-md">
-                                    <span className="text-left">
-                                      {pos.token} {pos.provider && <span className="text-xs text-gray-500">({pos.provider})</span>}
-                                    </span>
-                                    <span className="font-bold text-right flex-1">{pos.amount}</span>
-                                    <button
-                                      onClick={() => handleBestLendStrategy(pos)}
-                                      className={`ml-2 text-gray-500 hover:text-yellow-500 text-lg ${
-                                        loadingStrategy[pos.token] ? "opacity-50 cursor-not-allowed" : ""
-                                      }`}
-                                      disabled={loadingStrategy[pos.token]}
-                                    >
-                                      {loadingStrategy[pos.token] ? "🔄" : "🚀"}
-                                    </button>
+                <div className="w-full mt-6 text-sm">
+                  {/* Joule Positions */}
+                  <h3 className="text-lg font-semibold text-left">Positions on Joule</h3>
+                  <ul className="space-y-2 mt-2">
+                    {positions
+                      .filter(pos => pos.protocol === "Joule" && parseFloat(pos.amount) > 0) // Преобразуем amount в число
+                      .map((pos, index) => (
+                        <li key={index} className="flex items-center justify-between p-2 bg-gray-200 rounded-md">
+                          <span className="text-left">
+                            {pos.token} {pos.provider && <span className="text-xs text-gray-500">({pos.provider})</span>}
+                          </span>
+                          <span className="font-bold text-right flex-1">{pos.amount}</span>
+                          <button
+                            onClick={() => handleBestLendStrategy(pos)}
+                            className={`ml-2 text-gray-500 hover:text-yellow-500 text-sm ${
+                              loadingStrategy[pos.token] ? "opacity-50 cursor-not-allowed" : ""
+                            }`}
+                            disabled={loadingStrategy[pos.token]}
+                          >
+                            {loadingStrategy[pos.token] ? "🔄" : "🚀"}
+                          </button>
+                        </li>
+                      ))}
+                  </ul>
 
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-
-                )}
-
-
-                <Button onClick={() => signOut()} className="w-full mt-4 bg-gray-500 text-white">
-                  Sign out
-                </Button>
+                  {/* Echelon Positions */}
+                  <h3 className="text-lg font-semibold text-left mt-4">Positions on Echelon</h3>
+                  <ul className="space-y-2 mt-2">
+                    {positions
+                      .filter(pos => pos.protocol === "Echelon" && parseFloat(pos.amount) > 0) // Аналогично фильтруем для Echelon
+                      .map((pos, index) => (
+                        <li key={index} className="flex items-center justify-between p-2 bg-gray-200 rounded-md">
+                          <span className="text-left">
+                            {pos.token} {pos.provider && <span className="text-xs text-gray-500">({pos.provider})</span>}
+                          </span>
+                          <span className="font-bold text-right flex-1">{pos.amount}</span>
+                          <button
+                            onClick={() => handleBestLendStrategy(pos)}
+                            className={`ml-2 text-gray-500 hover:text-yellow-500 text-sm ${
+                              loadingStrategy[pos.token] ? "opacity-50 cursor-not-allowed" : ""
+                            }`}
+                            disabled={loadingStrategy[pos.token]}
+                          >
+                            {loadingStrategy[pos.token] ? "🔄" : "🚀"}
+                          </button>
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              )}
               </div>
             ) : (
               <Button onClick={() => signIn("google")} className="w-full">

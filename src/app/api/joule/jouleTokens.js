@@ -32,7 +32,7 @@ const JOULE_TOKENS = [
     icon: "https://raw.githubusercontent.com/PanoraExchange/Aptos-Tokens/main/logos/ThalaAPT.svg"
   },
   {
-    assetName: "AptosCoin",
+    assetName: "APT",
     provider: "AptosCoin",
     token: "0x1::aptos_coin::AptosCoin",
     decimals: 100000000,
