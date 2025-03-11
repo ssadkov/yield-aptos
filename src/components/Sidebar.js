@@ -7,6 +7,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Menu, X, Copy, RefreshCw, Eye, ExternalLink } from "lucide-react";
 import { generateMnemonicForUser } from "@/utils/mnemonic";
 import toast, { Toaster } from "react-hot-toast";
+import JOULE_TOKENS from "@/app/api/joule/jouleTokens";
+
 
 export default function Sidebar() {
   const { data: session } = useSession();
@@ -60,7 +62,7 @@ export default function Sidebar() {
       setBalances(data.balances || []);
       toast.success("Assets updated!");
 
-      // ✅ Обновляем и позиции пользователя!
+      // ✅ Обновляем и позиции пользователя !
       await fetchUserPositions(address);
     } catch (error) {
       console.error("❌ Balance update error:", error);
@@ -77,6 +79,9 @@ export default function Sidebar() {
       console.log(`🔄 Fetching user positions for ${address}`);
       const res = await fetch(`/api/joule/userPositions?address=${address}`);
       const data = await res.json();
+
+        // Выводим userPositions в консоль
+  console.log("📊 Raw user positions:", data.userPositions);
 
       if (data?.userPositions?.length > 0) {
         const positionsData = data.userPositions[0].positions_map.data.flatMap((position) =>
@@ -98,18 +103,31 @@ export default function Sidebar() {
   };
 
   const formatTokenKey = (key) => {
-    if (key.startsWith("@357b0b74")) return "USDT";
-    if (key.includes("aptos_coin")) return "APT";
-    return key.slice(0, 6) + "..." + key.slice(-6);
+    // Заменяем "@" в начале на "0x" для корректного поиска
+    const formattedKey = key.startsWith("@") ? key.replace("@", "0x") : key;
+  
+    // Ищем токен в JOULE_TOKENS
+    const tokenData = JOULE_TOKENS.find((t) => t.token === formattedKey);
+  
+    // Возвращаем assetName, если нашли, иначе сокращённый ключ
+    return tokenData ? tokenData.assetName : formattedKey.slice(0, 6) + "..." + formattedKey.slice(-6);
   };
+  
+  
 
   const formatAmount = (value) => (parseFloat(value) / 1e6).toFixed(2);
 
   const getProvider = (key) => {
-    if (key.startsWith("@357b0b74")) return "Tether";
-    if (key.includes("aptos_coin")) return "Aptos";
-    return "Unknown Provider";
+    // Заменяем "@" в начале на "0x" для корректного поиска
+    const formattedKey = key.startsWith("@") ? key.replace("@", "0x") : key;
+  
+    // Ищем токен в JOULE_TOKENS
+    const tokenData = JOULE_TOKENS.find((t) => t.token === formattedKey);
+  
+    // Возвращаем provider, если нашли, иначе — "Unknown Provider"
+    return tokenData ? tokenData.provider : "Unknown Provider";
   };
+  
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(aptosAddress);

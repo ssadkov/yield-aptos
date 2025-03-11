@@ -15,6 +15,7 @@ import { Send } from "lucide-react"; // Импортируем иконку Send
 import BestLendStrategy from "@/components/BestLendStrategy"; // Подключаем компонент BestLendStrategy
 
 
+
 // Отключаем SSR для react-markdown
 const ReactMarkdown = dynamic(() => import("react-markdown"), { ssr: false });
 
