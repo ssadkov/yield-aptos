@@ -304,7 +304,11 @@ export default function Sidebar() {
                 {positions.length > 0 && (
                 <div className="w-full mt-6 text-sm">
                   {/* Joule Positions */}
-                  <h3 className="text-lg font-semibold text-left">Positions on Joule</h3>
+                  <h3 className="text-lg font-semibold text-left flex items-center gap-2">
+                    <img src="https://app.joule.finance/favicon.ico" alt="Joule" className="w-4 h-4" />
+                    Positions on Joule
+                  </h3>
+
                   <ul className="space-y-2 mt-2">
                     {positions
                       .filter(pos => pos.protocol === "Joule" && parseFloat(pos.amount) > 0) // Преобразуем amount в число
@@ -328,7 +332,10 @@ export default function Sidebar() {
                   </ul>
 
                   {/* Echelon Positions */}
-                  <h3 className="text-lg font-semibold text-left mt-4">Positions on Echelon</h3>
+                  <h3 className="text-lg font-semibold text-left flex items-center gap-2 mt-4">
+                    <img src="https://echelon.market/favicon.ico" alt="Echelon" className="w-5 h-5" />
+                    Positions on Echelon
+                  </h3>
                   <ul className="space-y-2 mt-2">
                     {positions
                       .filter(pos => pos.protocol === "Echelon" && parseFloat(pos.amount) > 0) // Аналогично фильтруем для Echelon
