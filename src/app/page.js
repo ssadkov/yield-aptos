@@ -58,6 +58,8 @@ export default function Chat() {
   const [lendProtocol, setLendProtocol] = useState(null);
   const [lendAmount, setLendAmount] = useState(null);
   const [lendToken, setLendToken] = useState(null);
+  const [isLoading, setIsLoading] = useState(false)
+
 
 
 
@@ -250,15 +252,7 @@ export default function Chat() {
 
   // Функция для демонстрации кнопок до начала диалога
   const handleDirectToolAction = async (toolName, params) => {
-    const email = localStorage.getItem("userEmail")
-    const userId = localStorage.getItem("userId")
-
-    if (!email || !userId) {
-      alert("❌ User email or ID not found. Please log in.")
-      return
-    }
-
-    // Add user message showing what action they took
+  
     const userMessage = {
       id: nanoid(),
       role: "user",
@@ -266,49 +260,47 @@ export default function Chat() {
     }
 
     setMessages((prevMessages) => [...prevMessages, userMessage])
-
-    // Show loading message
-    handleBotMessage("⏳ Processing your request...")
+    setIsLoading(true)
 
     try {
-      // Call the tool directly without using AI
-      const response = await fetch("/api/chat/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          tool: toolName,
-          params,
-          email,
-          userId,
-        }),
-      })
+      let data;
+      try {
+        const response = await fetch("/api/aptos/createWallet", {
+        //  method: "POST",
+        //  headers: { "Content-Type": "application/json" },
+        });
+    
+        if (!response.ok) {
+          throw new Error("Failed to create wallet");
+        }
+    
+        data = await response.json();
+        console.log("Wallet created:", data);
+      } catch (error) {
+        console.error("Error creating wallet:", error);
+      }
+    
+      // Add bot response with tool result
+      const botMessage = {
+        id: nanoid(),
+        role: "assistant",
+        content: `${JSON.stringify(data, null, 2)}`,
+      }
 
-      if (!response.ok) throw new Error("Tool execution failed")
-
-      const result = await response.json()
-
-      // Remove the loading message
-      setMessages((prev) => prev.filter((msg) => msg.content !== "⏳ Processing your request..."))
-
-      // Add the tool result as a special message type
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: nanoid(),
-          role: "assistant",
-          toolInvocations: [
-            {
-              toolName: toolName,
-              result: result.data,
-            },
-          ],
-        },
-      ])
+      setMessages((prevMessages) => [...prevMessages, botMessage])
     } catch (error) {
-      console.error("❌ Error executing direct tool:", error)
-      // Remove the loading message and show error
-      setMessages((prev) => prev.filter((msg) => msg.content !== "⏳ Processing your request..."))
-      handleBotMessage("❌ Sorry, there was an error processing your request.")
+      console.error("Error calling tool:", error)
+
+      // Add error message
+      const errorMessage = {
+        id: nanoid(),
+        role: "assistant",
+        content: "Sorry, there was an error processing your request.",
+      }
+
+      setMessages((prevMessages) => [...prevMessages, errorMessage])
+    } finally {
+      setIsLoading(false)
     }
   }
 

@@ -26,7 +26,7 @@ const bestLend = tool({
         : asset;
 
       // Запрашиваем лучшие пулы для выбранного актива
-      const poolsResponse = await getPools.execute({ asset: searchAsset });
+      const poolsResponse = await getPools.execute({ asset: searchAsset }, { toolCallId: "bestLend", messages: [] });
 
       if (poolsResponse.error) {
         throw new Error(poolsResponse.error);
