@@ -4,7 +4,6 @@ import {
     AptosConfig,
     Network,
 } from "@aptos-labs/ts-sdk";
-import JOULE_TOKENS from "../../joule/jouleTokens"; // ✅ Используем JOULE_TOKENS вместо ECHELON_TOKENS
 
 const aptosConfig = new AptosConfig({ network: Network.MAINNET });
 const aptos = new Aptos(aptosConfig);
@@ -27,13 +26,17 @@ export async function GET(req) {
         // Получаем список всех рынков
         const markets = await echelonClient.getAllMarkets();
         
-        // Получаем позиции пользователя по всем рынкам
-        const userPositions = await Promise.all(
+        // Получаем данные по рынкам
+        const marketData = await Promise.all(
             markets.map(async (market) => {
                 const supply = await echelonClient.getAccountSupply(address, market);
-                return { market, supply };
+                const supplyApr = await echelonClient.getSupplyApr(market);
+                const coin = await echelonClient.getMarketCoin(market);
+                return supply > 0 ? { market, coin, supply, supplyApr } : null;
             })
         );
+        
+        const userPositions = marketData.filter(Boolean);
 
         return new Response(JSON.stringify({ userPositions }), {
             status: 200,

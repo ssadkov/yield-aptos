@@ -5,26 +5,28 @@
     "version": "1.0.0",
     "description": "Documentation API"
   },
-  "paths": {
-    "/api/hello": {
-      "get": {
-        "summary": "Hello test API",
-        "responses": {
-          "200": {
-            "description": "Success response",
-            "content": {
-              "application/json": {
-                "example": {
-                  "message": "Hello World!"
-                }
-              }
-            }
-          }
-        }
-      }
+  "tags": [
+    {
+      "name": "aptos",
+      "description": "Endpoints related to Aptos blockchain operations"
     },
+    {
+      "name": "joule",
+      "description": "Endpoints related to Joule protocol"
+    },
+    {
+      "name": "echelon",
+      "description": "Endpoints related to Echelon protocol"
+    },
+    {
+      "name": "general",
+      "description": "General endpoints"
+    }
+  ],
+  "paths": {
     "/api/aptos/checkBalance": {
       "get": {
+        "tags": ["aptos"],
         "summary": "Check Aptos wallet balance",
         "parameters": [
           {
@@ -53,6 +55,7 @@
     },
     "/api/aptos/createWallet": {
       "get": {
+        "tags": ["aptos"],
         "summary": "Generate a new Aptos wallet",
         "responses": {
           "200": {
@@ -70,8 +73,503 @@
         }
       }
     },
+    "/api/aptos/markets": {
+      "get": {
+        "tags": ["aptos"],
+        "summary": "Retrieve Aptos market data",
+        "description": "Returns market data for various assets on the Aptos blockchain.",
+        "parameters": [
+          {
+            "name": "asset",
+            "in": "query",
+            "description": "Filter results by asset name (e.g., 'APT', 'USDC')",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "protocol",
+            "in": "query",
+            "description": "Filter results by protocol (e.g., 'Joule', 'Echelon')",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns a list of market data",
+            "content": {
+              "application/json": {
+                "example": [
+                  {
+                    "asset": "APT",
+                    "provider": "Aptos",
+                    "totalAPY": 5.25,
+                    "depositApy": 3.5,
+                    "extraAPY": 1.75,
+                    "borrowAPY": 4.8,
+                    "extraBorrowAPY": 0,
+                    "extraStakingAPY": 0,
+                    "token": "0x1::aptos_coin::AptosCoin",
+                    "protocol": "Joule"
+                  },
+                  {
+                    "asset": "USDC",
+                    "provider": "LayerZero USDC",
+                    "totalAPY": 7.1,
+                    "depositApy": 2.8,
+                    "extraAPY": 4.3,
+                    "borrowAPY": 5.6,
+                    "extraBorrowAPY": 0,
+                    "extraStakingAPY": 0,
+                    "token": "0xf22bede237a07e121b56d91a491eb7bcdfd1f5907926a9e58338f964a01b17fa::asset::USDC",
+                    "protocol": "Echelon"
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - invalid parameters",
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "Invalid asset name"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "Failed to retrieve market data"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/aptos/panoraSwap": {
+      "post": {
+        "tags": ["aptos"],
+        "summary": "Swap tokens using Panora",
+        "description": "Swaps tokens from one asset to another using the Panora exchange API.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "privateKeyHex": {
+                    "type": "string",
+                    "description": "The sender's private key in Hex format",
+                    "example": "0xabcdef12345..."
+                  },
+                  "fromToken": {
+                    "type": "string",
+                    "description": "The token address to swap from",
+                    "example": "0x1::aptos_coin::AptosCoin"
+                  },
+                  "toToken": {
+                    "type": "string",
+                    "description": "The token address to swap to",
+                    "example": "0x2::stable_coin::USDC"
+                  },
+                  "swapAmount": {
+                    "type": "number",
+                    "description": "The amount of the fromToken to swap",
+                    "example": 10
+                  },
+                  "toWalletAddress": {
+                    "type": "string",
+                    "description": "Optional recipient wallet address for receiving the swapped tokens",
+                    "example": "0x6789abcd..."
+                  }
+                },
+                "required": [
+                  "privateKeyHex",
+                  "fromToken",
+                  "toToken",
+                  "swapAmount"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful swap",
+            "content": {
+              "application/json": {
+                "example": {
+                  "transactionHash": "0xabc123..."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing or invalid parameters",
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "Invalid input parameters"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "Swap transaction failed"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/aptos/transfer": {
+      "post": {
+        "tags": ["aptos"],
+        "summary": "Transfer tokens on Aptos blockchain",
+        "description": "Transfers APT or a specified token to a recipient address.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "privateKey": {
+                    "type": "string",
+                    "description": "Sender's private key",
+                    "example": "0xabcdef..."
+                  },
+                  "receiver": {
+                    "type": "string",
+                    "description": "Recipient wallet address",
+                    "example": "0x123..."
+                  },
+                  "amount": {
+                    "type": "number",
+                    "description": "Amount to transfer",
+                    "example": 1.5
+                  },
+                  "token": {
+                    "type": "string",
+                    "description": "Token to transfer (default is Aptos)",
+                    "example": "0x1::aptos_coin::AptosCoin",
+                    "default": "0x1::aptos_coin::AptosCoin"
+                  }
+                },
+                "required": [
+                  "privateKey",
+                  "receiver",
+                  "amount"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Transaction successful",
+            "content": {
+              "application/json": {
+                "example": {
+                  "transactionHash": "0xabcdef123456..."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing or invalid parameters",
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "Invalid input"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "Transaction failed"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/echelon/lend": {
+      "post": {
+        "tags": ["echelon"],
+        "summary": "Lend tokens to an Echelon pool",
+        "description": "Lend the specified tokens to the Echelon protocol.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "privateKeyHex": {
+                    "type": "string",
+                    "description": "User's private key in Hex format",
+                    "example": "0x5fd6...."
+                  },
+                  "token": {
+                    "type": "string",
+                    "description": "Token address to be lent",
+                    "example": "0x357b0b74bc833e95a115ad22604854d6b0fca151cecd94111770e5d6ffc9dc2b"
+                  },
+                  "amount": {
+                    "type": "number",
+                    "description": "Amount of tokens to lend",
+                    "example": 10
+                  }
+                },
+                "required": [
+                  "privateKeyHex",
+                  "token",
+                  "amount"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful transaction",
+            "content": {
+              "application/json": {
+                "example": {
+                  "transactionHash": "0xabc..."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing or invalid parameters",
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "Invalid input"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "Lend transaction failed"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/echelon/markets": {
+      "get": {
+        "tags": ["echelon"],
+        "summary": "Retrieve Echelon market data",
+        "description": "Returns market data for various assets in the Echelon protocol, including supply and borrow APRs.",
+        "responses": {
+          "200": {
+            "description": "Market data retrieved successfully",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": true,
+                  "marketData": [
+                    {
+                      "market": "0x447b3b516546f28e8c4f6825a6287b09161659e7c500c599c29c28a8492844b8",
+                      "coin": "0xf22bede237a07e121b56d91a491eb7bcdfd1f5907926a9e58338f964a01b17fa::asset::USDT",
+                      "supplyAPR": 0.0727701347786933,
+                      "borrowAPR": 0.110124999890104
+                    },
+                    {
+                      "market": "0xa9c51ca3bcd93978d0c4aada7c4cf47c0791caced3cdc4e15f2c8e0797d1f93c",
+                      "coin": "0xf22bede237a07e121b56d91a491eb7bcdfd1f5907926a9e58338f964a01b17fa::asset::USDC",
+                      "supplyAPR": 0.0751819096039981,
+                      "borrowAPR": 0.11193749983795
+                    },
+                    {
+                      "market": "0xef2ae89796725d0eb363326ecb7df159feb949f6d1f400f76deeeebccbac00f1",
+                      "coin": "0x6f986d146e4a90b828d8c12c14b6f4e003fdff11a8eecceceb63744363eaac01::mod_coin::MOD",
+                      "supplyAPR": 0.110989563167095,
+                      "borrowAPR": 0.162899999879301
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error - failed to fetch market data",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": "Error message here"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/echelon/userPositions": {
+      "get": {
+        "tags": ["echelon"],
+        "summary": "Retrieve user positions in Echelon",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "query",
+            "description": "User wallet address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User positions in Echelon",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": true,
+                  "userPositions": [
+                    {
+                      "market": "0x761a97787fa8b3ae0cef91ebc2d96e56cc539df5bc88dadabee98ae00363a831",
+                      "coin": "0x1::aptos_coin::AptosCoin",
+                      "supply": 12002495,
+                      "supplyApr": 0.0486500100232661
+                    },
+                    {
+                      "market": "0xac00e90cdadec06d81e0d5ce7a3e93d63d563e982dea0ca15bad2b067f42d2be",
+                      "coin": "0x357b0b74bc833e95a115ad22604854d6b0fca151cecd94111770e5d6ffc9dc2b",
+                      "supply": 10006,
+                      "supplyApr": 0.0722731600981206
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing or invalid parameters",
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "Address is required"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "Failed to fetch positions"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hello": {
+      "get": {
+        "tags": ["general"],
+        "summary": "Hello test API",
+        "responses": {
+          "200": {
+            "description": "Success response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "message": "Hello World!"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/joule/lend": {
+      "post": {
+        "tags": ["joule"],
+        "summary": "Lend tokens to a Joule pool",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "privateKeyHex": {
+                    "type": "string",
+                    "example": "0xabcdef..."
+                  },
+                  "token": {
+                    "type": "string",
+                    "example": "0x357b0b74bc833e95a115ad22604854d6b0fca151cecd94111770e5d6ffc9dc2b::asset::USDT"
+                  },
+                  "amount": {
+                    "type": "number",
+                    "example": 10
+                  },
+                  "positionId": {
+                    "type": "string",
+                    "example": "1234"
+                  }
+                },
+                "required": [
+                  "privateKeyHex",
+                  "token",
+                  "amount"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Returns transaction hash",
+            "content": {
+              "application/json": {
+                "example": {
+                  "transactionHash": "0xabc..."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/joule/pools": {
       "get": {
+        "tags": ["joule"],
         "summary": "Retrieve the list of Joule pools",
         "parameters": [
           {
@@ -110,6 +608,7 @@
     },
     "/api/joule/userPositions": {
       "get": {
+        "tags": ["joule"],
         "summary": "Retrieve user positions in Joule",
         "parameters": [
           {
@@ -131,8 +630,14 @@
                   {
                     "positionId": "1234",
                     "assets": [
-                      { "asset": "0x1::aptos_coin::AptosCoin", "amount": "1000" },
-                      { "asset": "0xf22bede2::asset::USDT", "amount": "500" }
+                      {
+                        "asset": "0x1::aptos_coin::AptosCoin",
+                        "amount": "1000"
+                      },
+                      {
+                        "asset": "0xf22bede2::asset::USDT",
+                        "amount": "500"
+                      }
                     ]
                   }
                 ]
@@ -142,54 +647,9 @@
         }
       }
     },
-    "/api/joule/lend": {
-      "post": {
-        "summary": "Lend tokens to a Joule pool",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "privateKeyHex": {
-                    "type": "string",
-                    "example": "0xabcdef..."
-                  },
-                  "token": {
-                    "type": "string",
-                    "example": "0x357b0b74bc833e95a115ad22604854d6b0fca151cecd94111770e5d6ffc9dc2b::asset::USDT"
-                  },
-                  "amount": {
-                    "type": "number",
-                    "example": 10
-                  },
-                  "positionId": {
-                    "type": "string",
-                    "example": "1234"
-                  }
-                },
-                "required": ["privateKeyHex", "token", "amount"]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Returns transaction hash",
-            "content": {
-              "application/json": {
-                "example": {
-                  "transactionHash": "0xabc..."
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/joule/withdraw": {
       "post": {
+        "tags": ["joule"],
         "summary": "Withdraw tokens from a Joule pool",
         "requestBody": {
           "required": true,
@@ -215,7 +675,11 @@
                     "example": "1234"
                   }
                 },
-                "required": ["privateKeyHex", "token", "amount"]
+                "required": [
+                  "privateKeyHex",
+                  "token",
+                  "amount"
+                ]
               }
             }
           }
@@ -235,302 +699,24 @@
             "description": "Bad request",
             "content": {
               "application/json": {
-                "example": { "error": "Missing required parameters" }
+                "example": {
+                  "error": "Missing required parameters"
+                }
               }
             }
           },
           "500": {
             "description": "Server error",
-            "content": {
-              "application/json": {
-                "example": { "error": "Failed to process withdraw" }
-              }
-            }
-          }
-        }
-      }
-    },
-	"/api/aptos/transfer": {
-  "post": {
-    "summary": "Transfer tokens on Aptos blockchain",
-    "description": "Transfers APT or a specified token to a recipient address.",
-    "requestBody": {
-      "required": true,
-      "content": {
-        "application/json": {
-          "schema": {
-            "type": "object",
-            "properties": {
-              "privateKey": {
-                "type": "string",
-                "description": "Sender's private key",
-                "example": "0xabcdef..."
-              },
-              "receiver": {
-                "type": "string",
-                "description": "Recipient wallet address",
-                "example": "0x123..."
-              },
-              "amount": {
-                "type": "number",
-                "description": "Amount to transfer",
-                "example": 1.5
-              },
-              "token": {
-                "type": "string",
-                "description": "Token to transfer (default is Aptos)",
-                "example": "0x1::aptos_coin::AptosCoin",
-                "default": "0x1::aptos_coin::AptosCoin"
-              }
-            },
-            "required": ["privateKey", "receiver", "amount"]
-          }
-        }
-      }
-    },
-    "responses": {
-      "200": {
-        "description": "Transaction successful",
-        "content": {
-          "application/json": {
-            "example": {
-              "transactionHash": "0xabcdef123456..."
-            }
-          }
-        }
-      },
-      "400": {
-        "description": "Bad request - missing or invalid parameters",
-        "content": {
-          "application/json": {
-            "example": { "error": "Invalid input" }
-          }
-        }
-      },
-      "500": {
-        "description": "Server error",
-        "content": {
-          "application/json": {
-            "example": { "error": "Transaction failed" }
-          }
-        }
-      }
-    }
-  }
-  },
-      "/api/aptos/markets": {
-        "get": {
-          "summary": "Retrieve Aptos market data",
-          "description": "Returns market data for various assets on the Aptos blockchain.",
-          "parameters": [
-            {
-              "name": "asset",
-              "in": "query",
-              "description": "Filter results by asset name (e.g., 'APT', 'USDC')",
-              "required": false,
-              "schema": {
-                "type": "string"
-              }
-            },
-            {
-              "name": "protocol",
-              "in": "query",
-              "description": "Filter results by protocol (e.g., 'Joule', 'Echelon')",
-              "required": false,
-              "schema": {
-                "type": "string"
-              }
-            }
-          ],
-          "responses": {
-            "200": {
-              "description": "Returns a list of market data",
-              "content": {
-                "application/json": {
-                  "example": [
-                    {
-                      "asset": "APT",
-                      "provider": "Aptos",
-                      "totalAPY": 5.25,
-                      "depositApy": 3.5,
-                      "extraAPY": 1.75,
-                      "borrowAPY": 4.8,
-                      "extraBorrowAPY": 0,
-                      "extraStakingAPY": 0,
-                      "token": "0x1::aptos_coin::AptosCoin",
-                      "protocol": "Joule"
-                    },
-                    {
-                      "asset": "USDC",
-                      "provider": "LayerZero USDC",
-                      "totalAPY": 7.1,
-                      "depositApy": 2.8,
-                      "extraAPY": 4.3,
-                      "borrowAPY": 5.6,
-                      "extraBorrowAPY": 0,
-                      "extraStakingAPY": 0,
-                      "token": "0xf22bede237a07e121b56d91a491eb7bcdfd1f5907926a9e58338f964a01b17fa::asset::USDC",
-                      "protocol": "Echelon"
-                    }
-                  ]
-                }
-              }
-            },
-            "400": {
-              "description": "Bad request - invalid parameters",
-              "content": {
-                "application/json": {
-                  "example": { "error": "Invalid asset name" }
-                }
-              }
-            },
-            "500": {
-              "description": "Server error",
-              "content": {
-                "application/json": {
-                  "example": { "error": "Failed to retrieve market data" }
-                }
-              }
-            }
-          }
-        }
-      },
-      "/api/echelon/lend": {
-        "post": {
-          "summary": "Lend tokens to an Echelon pool",
-          "description": "Lend the specified tokens to the Echelon protocol.",
-          "requestBody": {
-            "required": true,
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "privateKeyHex": {
-                      "type": "string",
-                      "description": "User's private key in Hex format",
-                      "example": "0x5fd6...."
-                    },
-                    "token": {
-                      "type": "string",
-                      "description": "Token address to be lent",
-                      "example": "0x357b0b74bc833e95a115ad22604854d6b0fca151cecd94111770e5d6ffc9dc2b"
-                    },
-                    "amount": {
-                      "type": "number",
-                      "description": "Amount of tokens to lend",
-                      "example": 10
-                    }
-                  },
-                  "required": ["privateKeyHex", "token", "amount"]
-                }
-              }
-            }
-          },
-          "responses": {
-            "200": {
-              "description": "Successful transaction",
-              "content": {
-                "application/json": {
-                  "example": {
-                    "transactionHash": "0xabc..."
-                  }
-                }
-              }
-            },
-            "400": {
-              "description": "Bad request - missing or invalid parameters",
-              "content": {
-                "application/json": {
-                  "example": { "error": "Invalid input" }
-                }
-              }
-            },
-            "500": {
-              "description": "Server error",
-              "content": {
-                "application/json": {
-                  "example": { "error": "Lend transaction failed" }
-                }
-              }
-            }
-          }
-        }
-      },
-
-    "/api/aptos/panoraSwap": {
-      "post": {
-        "summary": "Swap tokens using Panora",
-        "description": "Swaps tokens from one asset to another using the Panora exchange API.",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "privateKeyHex": {
-                    "type": "string",
-                    "description": "The sender's private key in Hex format",
-                    "example": "0xabcdef12345..."
-                  },
-                  "fromToken": {
-                    "type": "string",
-                    "description": "The token address to swap from",
-                    "example": "0x1::aptos_coin::AptosCoin"
-                  },
-                  "toToken": {
-                    "type": "string",
-                    "description": "The token address to swap to",
-                    "example": "0x2::stable_coin::USDC"
-                  },
-                  "swapAmount": {
-                    "type": "number",
-                    "description": "The amount of the fromToken to swap",
-                    "example": 10
-                  },
-                  "toWalletAddress": {
-                    "type": "string",
-                    "description": "Optional recipient wallet address for receiving the swapped tokens",
-                    "example": "0x6789abcd..."
-                  }
-                },
-                "required": ["privateKeyHex", "fromToken", "toToken", "swapAmount"]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful swap",
             "content": {
               "application/json": {
                 "example": {
-                  "transactionHash": "0xabc123..."
+                  "error": "Failed to process withdraw"
                 }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request - missing or invalid parameters",
-            "content": {
-              "application/json": {
-                "example": { "error": "Invalid input parameters" }
-              }
-            }
-          },
-          "500": {
-            "description": "Server error",
-            "content": {
-              "application/json": {
-                "example": { "error": "Swap transaction failed" }
               }
             }
           }
         }
       }
     }
-
-
   }
 }
