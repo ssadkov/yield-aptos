@@ -8,7 +8,7 @@ import { nanoid } from "nanoid";
 
 export default function PoolsTable({ pools, balances, onSupplyClick, onBotMessage, setMessages, handleInputChange   }) {
   const hasToken = (token) => balances.some((b) => b.asset === token && parseFloat(b.balance) > 0);
-  const hasAnyBalance = balances.length > 0 && balances.some((b) => parseFloat(b.balance) > 0);
+  const hasAnyBalance = balances.length > 0 && balances.some((b) => parseFloat(b.balance) > 0.01);
 
   // Найти иконку по `token`
   const getTokenIcon = (token) => {
@@ -24,10 +24,17 @@ export default function PoolsTable({ pools, balances, onSupplyClick, onBotMessag
 
     if (!tokenBalance || parseFloat(tokenBalance.balance) <= 0) {
         // Если баланс выбранного токена 0, ищем токен с положительным балансом среди тех, что есть в таблице (pools)
-        const availableToken = pools.find((row) => {
-            const balance = balances.find((b) => b.asset === row.asset);
-            return balance && parseFloat(balance.balance) > 0; // Ищем токен с балансом > 0
-        });
+        const availableToken = (() => {
+          const tokensFromPools = balances
+              .filter((b) => parseFloat(b.balance) > 0) // Убираем нулевые балансы
+              .filter((b) => pools.some((p) => p.asset === b.asset)) // Оставляем только те, что есть в pools
+              .reduce((max, current) => 
+                  parseFloat(current.balance) > parseFloat(max.balance) ? current : max, 
+                  { balance: "0" } // Начальное значение (нужно, чтобы `reduce()` не ломался)
+              );
+      
+          return tokensFromPools.balance !== "0" ? tokensFromPools : null; // Если нет подходящих токенов, возвращаем null
+      })();
 
         if (!availableToken) {
             // Если нет токенов с положительным балансом в списке

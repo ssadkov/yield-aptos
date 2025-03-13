@@ -128,23 +128,58 @@ export default function SwapLendForm({ protocol, token, amount, swapToken, onSwa
               // await new Promise(resolve => setTimeout(resolve, 3000));
           
               // Вызываем функцию для получения баланса
-              lendBalance = await checkBalanceAfterSwap(toWalletAddress, token);
+          lendBalance = await checkBalanceAfterSwap(toWalletAddress, token);
           } else {
               console.error("❌ Swap failed:", swapData.error);
           }
           
           // ПИШЕМ LEDN ЧАСТЬ 
+      const apiEndpoint =
+        protocol === "Joule"
+          ? "/api/joule/lend"
+          : protocol === "Echelon"
+          ? "/api/echelon/lend"
+          : null;
 
+      if (!apiEndpoint) {
+        handleBotMessage(`❌ Unsupported protocol: ${protocol}`);
+        setIsLending(false);
+        return;
+      }
 
-          
+      // Формируем payload для запроса
+      const requestLendBody = {
+        privateKeyHex,
+        token,
+        amount: lendBalance,
+      };
 
-      // Сообщение об успешной операции
-      setIsProcessing(false); // Разблокируем кнопку
-    } catch (error) {
-      console.error("❌ Error during Swap and Lend:", error);
+      // Только для Joule добавляем positionId
+      if (protocol === "Joule") {
+        requestLendBody.positionId = "1"; // Здесь можно динамически определять позицию, если надо
+      }
+
+      const lendResponse = await fetch(apiEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestLendBody),
+      });
+
+      const lendData = await lendResponse.json();
+
+      if (lendData.transactionHash) {
+        const explorerLink = `https://explorer.aptoslabs.com/txn/${lendData.transactionHash}?network=mainnet`;
+        console.log(`✅ Lend transaction successful on ${protocol}!\n🔗 [View on Explorer](${explorerLink})`);
+
+     
       setIsProcessing(false); // Разблокируем кнопку при ошибке
+       }
+      } catch (error) {
+        console.error("❌ Error during swap and lend:", error);
+        setIsProcessing(false); // Разблокируем кнопку при ошибке
+      }
+
     }
-  };
 
   return (
     <div className="p-4 border border-gray-400 rounded-md bg-gray-100 dark:bg-gray-800">
@@ -177,4 +212,5 @@ export default function SwapLendForm({ protocol, token, amount, swapToken, onSwa
       </div>
     </div>
   );
+
 }
