@@ -261,26 +261,39 @@ export default function Sidebar() {
               </div>
 
 
-                <div className="flex items-center justify-between w-full bg-gray-200 dark:bg-gray-700 p-3 rounded-lg mt-4">
-                  <span className="truncate text-sm">{formatAddress(aptosAddress)}</span>
-                  <div className="flex space-x-2">
-                    <button onClick={copyToClipboard} className="p-2 rounded-lg bg-gray-300 dark:bg-gray-600">
-                      <Copy size={20} />
-                    </button>
-                    <a
-                      href={`https://explorer.aptoslabs.com/account/${aptosAddress}?network=mainnet`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-2 rounded-lg bg-gray-300 dark:bg-gray-600"
-                    >
-                      <Globe size={20} />
-                    </a>
-                  </div>
-                </div>
+              <div className="flex items-center justify-between w-full bg-gray-200 dark:bg-gray-700 p-3 rounded-lg mt-4">
+                <span className="truncate text-sm">{formatAddress(aptosAddress)}</span>
+                <div className="flex space-x-2">
+                  {/* Кнопка копирования */}
+                  <button onClick={copyToClipboard} className="p-2 rounded-lg bg-gray-300 dark:bg-gray-600">
+                    <Copy size={20} />
+                  </button>
+                  {/* Кнопка показа мнемоники */}
+                  {/* Кнопка показа мнемоники с подтверждением */}
+                  <button
+                    onClick={() => {
+                      if (window.confirm("Are you sure you want to view your mnemonic phrase? Make sure no one else is watching your screen.")) {
+                        toast(`Mnemonic: ${mnemonic}`);
+                      }
+                    }}
+                    className="p-2 rounded-lg bg-gray-300 dark:bg-gray-600"
+                    title="Show Mnemonic"
+                  >
+                    <Eye size={20} />
+                  </button>
 
-                <Button className="w-full mt-4 flex items-center gap-2 bg-gray-500 text-white" onClick={() => toast(`Mnemonic: ${mnemonic}`)}>
-                  Show Mnemonic <Eye size={18} />
-                </Button>
+                  {/* Ссылка на обозреватель */}
+                  <a
+                    href={`https://explorer.aptoslabs.com/account/${aptosAddress}?network=mainnet`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2 rounded-lg bg-gray-300 dark:bg-gray-600"
+                  >
+                    <Globe size={20} />
+                  </a>
+                </div>
+              </div>
+
 
 
                 <div className="w-full mt-4 text-sm">

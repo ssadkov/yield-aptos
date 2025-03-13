@@ -19,9 +19,6 @@ export async function POST(req: Request) {
       console.log("✅ Extracted userId:", userId);
     }
 
-
-  //  console.log("🔹 Full request body received:", JSON.stringify(messages, null, 2));
-
     const result = streamText({
       model: openai("gpt-4o"),
       messages,
