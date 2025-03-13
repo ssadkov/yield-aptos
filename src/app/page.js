@@ -378,8 +378,8 @@ export default function Chat() {
                         )  : tool.toolName === "swapAndLendAsset" && tool.result ? (
                           <SwapLendForm
                             protocol={tool.result.protocol}
-                            token={tool.result.token}
-                            swapToken={tool.result.swapToken}
+                            token={tool.result.toToken}
+                            swapToken={tool.result.fromToken}
                             amount={tool.result.amount}
                             onSwap={handleSwapAndLendClick} // Используем handleSwapAndLendClick
                           />

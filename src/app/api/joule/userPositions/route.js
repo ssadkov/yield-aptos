@@ -18,7 +18,7 @@ export async function GET(req) {
             });
         }
 
-        console.log(`🔹 Fetching positions for user: ${userAddress}`);
+        // console.log(`🔹 Fetching positions for user: ${userAddress}`);
 
         // ✅ Фикс обработки приватного ключа
 		

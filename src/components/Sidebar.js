@@ -221,7 +221,7 @@ export default function Sidebar() {
     }
   };
   
-  console.log("📊 Rendered positions in UI:", positions);
+  // console.log("📊 Rendered positions in UI:", positions);
 
 
   return (

@@ -21,7 +21,7 @@ export async function GET(req) {
     }
 
     try {
-        console.log(`🔍 Fetching Echelon positions for ${address}`);
+        // console.log(`🔍 Fetching Echelon positions for ${address}`);
         
         // Получаем список всех рынков
         const markets = await echelonClient.getAllMarkets();
