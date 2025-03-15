@@ -13,7 +13,7 @@ import dynamic from "next/dynamic";
 import { generateMnemonicForUser } from "@/utils/mnemonic";
 import { Send } from "lucide-react"; // Импортируем иконку Send
 import BestLendStrategy from "@/components/BestLendStrategy"; // Подключаем компонент BestLendStrategy
-
+import { useSessionData } from "@/context/SessionProvider";
 
 
 // Отключаем SSR для react-markdown
@@ -24,28 +24,41 @@ const presetActions = [
     label: "Show Top Yield Pools",
     tool: "getPools",
     params: { limit: 5, sortBy: "apy" },
+    conditions: { loggedIn: false, hasFunds: false }, // Доступно, если пользователь залогинен и у него есть средства
   },
   {
     label: "Create new Aptos wallet",
     tool: "createAptosWallet",
-    params: { },
+    params: {},
+    conditions: { loggedIn: false }, // Доступно только если пользователь НЕ залогинен
   },
   {
     label: "Show My Positions",
     tool: "getPositions",
     params: {},
+    conditions: { loggedIn: true, hasPositions: true }, // Доступно, если у пользователя есть активные позиции
   },
   {
-    label: "Swap & Lend Guide",
+    label: "How can I create crypto wallet?",
     tool: "getSwapLendOptions",
     params: { minApy: 5 },
+    conditions: { loggedIn: false }, 
   },
-]
+  {
+    label: "Optimize My Lending Strategy",
+    tool: "getBestLendOptions",
+    params: {},
+    conditions: { loggedIn: true, hasPositions: true }, // Доступно, если у пользователя есть активные позиции
+  },
+];
+
 
 export default function Chat() {
-  const { messages, input, handleInputChange, handleSubmit, setMessages, append, status } = useChat({
+  const { messages, input, handleInputChange, setMessages, append, status } = useChat({
     maxSteps: 5,
   });
+
+  const { session } = useSessionData();
 
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
@@ -305,6 +318,18 @@ export default function Chat() {
     }
   }
 
+  const filteredActions = presetActions;
+  
+  // .filter(action => {
+  //   const { loggedIn, hasFunds, hasPositions } = action.conditions || {};
+  //   return (
+  //     (loggedIn === undefined || loggedIn === !!session) &&
+  //     (hasFunds === undefined || hasFunds === (balances.length > 0 && balances.some(b => parseFloat(b.balance) > 0))) &&
+  //     (hasPositions === undefined || hasPositions === (positions.length > 0))
+  //   );
+  // });
+  
+
   return (
     <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900">
       <div className="flex-1 lg:ml-80 flex flex-col items-center justify-center px-4 pt-16 lg:pt-4">
@@ -316,7 +341,7 @@ export default function Chat() {
                 <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 mb-4">
                   <h3 className="text-lg font-medium mb-3">Quick Actions</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                   {presetActions.map((action, index) => (
+                   {filteredActions.map((action, index) => (
                    <button
                   key={index}
                   className="bg-white dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-left p-3 rounded-lg shadow-sm transition-colors"

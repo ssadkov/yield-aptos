@@ -1,28 +1,35 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { signIn, signOut, useSession } from "next-auth/react";
+import { signIn, signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Menu, X, Copy, RefreshCw, Eye, Globe, LogOut } from "lucide-react";
 import { generateMnemonicForUser } from "@/utils/mnemonic";
 import toast, { Toaster } from "react-hot-toast";
 import JOULE_TOKENS from "@/app/api/joule/jouleTokens";
-
+import { useSessionData } from "@/context/SessionProvider";
 
 export default function Sidebar() {
-  const { data: session } = useSession();
+  const { session, status } = useSessionData(); // ✅ Теперь получаем и status
   const [isOpen, setIsOpen] = useState(false);
   const [aptosAddress, setAptosAddress] = useState("");
   const [mnemonic, setMnemonic] = useState("");
   const [balances, setBalances] = useState([]);
   const [positions, setPositions] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false); // ✅ Новый state для UI
   const [loadingStrategy, setLoadingStrategy] = useState({});
 
+  console.log("🔄 Sidebar session status:", status, session);
 
+  // ✅ Реагируем на изменения `session`
   useEffect(() => {
-    if (session) {
+    if (status === "authenticated" && session) {
+      console.log("✅ Пользователь залогинен:", session.user.email);
+      setIsLoggedIn(true); // Обновляем UI
+
+      // Генерируем кошелек
       const generatedMnemonic = generateMnemonicForUser(session.user.email, session.user.id);
       localStorage.setItem("userEmail", session.user.email);
       localStorage.setItem("userId", session.user.id);
@@ -166,7 +173,7 @@ export default function Sidebar() {
   };
 
   const formatAddress = (address) =>
-    address ? `${address.slice(0, 5)}.......${address.slice(-4)}` : "Loading...";
+    address ? `${address.slice(0, 5)}...${address.slice(-4)}` : "Loading...";
 
 
   const handleBestLendStrategy = async (pos) => {
@@ -263,7 +270,7 @@ export default function Sidebar() {
 
               <div className="flex items-center justify-between w-full bg-gray-200 dark:bg-gray-700 p-3 rounded-lg mt-4">
                 <span className="truncate text-sm">{formatAddress(aptosAddress)}</span>
-                <div className="flex space-x-2">
+                <div className="flex space-x-2">&nbsp;
                   {/* Кнопка копирования */}
                   <button onClick={copyToClipboard} className="p-2 rounded-lg bg-gray-300 dark:bg-gray-600">
                     <Copy size={20} />
@@ -303,6 +310,9 @@ export default function Sidebar() {
                       <RefreshCw size={20} />
                     </button>
                   </div>
+                  {balances.length === 0 ? (
+                  <p className="text-sm text-red-500">Top up your wallet to start earning passive income</p>
+                ) : (
                   <ul className="space-y-2">
                     {balances.map((b, index) => (
                       <li key={index} className="flex justify-between p-2 bg-gray-200 rounded-md">
@@ -313,6 +323,7 @@ export default function Sidebar() {
                       </li>
                     ))}
                   </ul>
+                )}
                 </div>
                 {positions.length > 0 && (
                 <div className="w-full mt-6 text-sm">
@@ -374,9 +385,10 @@ export default function Sidebar() {
               )}
               </div>
             ) : (
-              <Button onClick={() => signIn("google")} className="w-full">
+              <Button onClick={() => signIn("google", { callbackUrl: "/" })} className="w-full">
                 Sign in with Google
               </Button>
+
             )}
           </CardContent>
         </Card>
