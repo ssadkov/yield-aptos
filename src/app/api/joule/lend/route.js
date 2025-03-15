@@ -4,23 +4,24 @@ import {
     AptosConfig,
     Ed25519PrivateKey,
     Network,
-    PrivateKey
+    PrivateKey,
+    Account
 } from "@aptos-labs/ts-sdk";
-import JOULE_TOKENS from "../jouleTokens"; // Таблица токенов Joule
+import JOULE_TOKENS from "../jouleTokens"; // 📌 Таблица токенов Joule
 console.log("🔹 JOULE_TOKENS loaded:", JOULE_TOKENS);
 
-
+// ✅ Настройка подключения к Aptos
 const aptosConfig = new AptosConfig({ network: Network.MAINNET });
 const aptos = new Aptos(aptosConfig);
 
 export async function POST(req) {
     try {
-        // 🔎 Читаем JSON из запроса
+        // 🛠 1. Читаем JSON из запроса
         const requestData = await req.json();
         console.log(`🔹 Full request data:`, requestData);
 
-        // 🛠 Проверяем входные параметры
-        const { privateKeyHex, token, amount } = requestData;
+        // 📌 Проверяем входные параметры
+        const { privateKeyHex, token, amount, useSponsor } = requestData;
         if (!privateKeyHex || !token || !amount) {
             console.error("❌ Missing required parameters:", { privateKeyHex, token, amount });
             return new Response(JSON.stringify({ error: "Missing required parameters" }), {
@@ -31,12 +32,7 @@ export async function POST(req) {
 
         console.log(`🔹 Initiating LEND: ${amount} ${token}`);
 
-        // 🔎 Проверяем список токенов
-        console.log("🔎 Available tokens in JOULE_TOKENS:", JOULE_TOKENS.map(t => t.token));
-
-        // 🔎 Ищем токен в списке
-        console.log(`🔎 Searching for token: ${token}`);
-
+        // 🔎 2. Ищем токен в JOULE_TOKENS
         const tokenInfo = JOULE_TOKENS.find(t => t.token === token);
         if (!tokenInfo) {
             console.error(`❌ Token not found: ${token}`);
@@ -53,25 +49,37 @@ export async function POST(req) {
         const amountOnChain = BigInt(Math.round(amount * decimals));
         console.log(`🔹 Converted amount: ${amount} → ${amountOnChain} (on-chain)`);
 
-        // ✅ Обработка приватного ключа
+        // ✅ 3. Создание аккаунта отправителя
         const privateKey = new Ed25519PrivateKey(PrivateKey.formatPrivateKey(privateKeyHex, "ed25519"));
         const account = await aptos.deriveAccountFromPrivateKey({ privateKey });
 
         const signer = new LocalSigner(account, Network.MAINNET);
         const agent = new AgentRuntime(signer, aptos);
 
-        // ✅ Проверяем баланс пользователя
+        // ✅ 4. Проверяем баланс пользователя
         const userBalance = await aptos.getAccountAPTAmount({ accountAddress: account.accountAddress });
         console.log(`✅ User balance check passed: ${userBalance} APT available`);
 
-        if (userBalance < 0.01) {
-            return new Response(JSON.stringify({ error: "Insufficient APT balance for gas fees" }), {
-                status: 400,
-                headers: { "Content-Type": "application/json" }
-            });
+        let sponsorAccount = null;
+        let useSponsorForTransaction = useSponsor || userBalance < 0.01; // Если баланс APT меньше 0.01 → используем спонсора
+
+        if (useSponsorForTransaction) {
+            console.log("⚠️ Using sponsor for transaction...");
+            const sponsorPrivateKey = process.env.SPONSOR_PRIVATE_KEY; // 🟢 Приватный ключ спонсора
+            if (!sponsorPrivateKey) {
+                console.error("❌ Sponsor private key is missing");
+                return new Response(JSON.stringify({ error: "Sponsor private key is missing" }), {
+                    status: 500,
+                    headers: { "Content-Type": "application/json" }
+                });
+            }
+
+            const sponsorEdKey = new Ed25519PrivateKey(sponsorPrivateKey);
+            sponsorAccount = Account.fromPrivateKey({ privateKey: sponsorEdKey });
+            console.log("✅ Sponsor Account derived:", sponsorAccount.accountAddress.toString());
         }
 
-        // 🔹 Подготовка транзакции
+        // ✅ 5. Подготовка данных транзакции
         const positionId = "1234";
         const newPosition = true;
 
@@ -92,18 +100,45 @@ export async function POST(req) {
 
         console.log(`🔹 Transaction data:`, transactionData);
 
-        // ✅ Строим и отправляем транзакцию
+        // ✅ 6. Строим транзакцию (с учетом спонсора)
+        console.log("\n=== 1. Building transaction ===\n");
         const transaction = await agent.aptos.transaction.build.simple({
             sender: agent.account.getAddress(),
-            data: transactionData,
+            withFeePayer: useSponsorForTransaction, // 🟢 Активируем спонсирование, если нужно
+            data: transactionData
         });
 
-        console.log(`✅ Transaction created:`, transaction);
+        console.log("✅ Transaction built!");
 
-        const committedTransactionHash = await agent.account.sendTransaction(transaction);
-        console.log(`✅ Transaction sent! Hash: ${committedTransactionHash}`);
+        // ✅ 7. Подписываем транзакцию отправителем
+        console.log("\n=== 2. Signing transaction ===\n");
+        const senderAuth = await aptos.transaction.sign({
+            signer: account,
+            transaction,
+        });
 
-        return new Response(JSON.stringify({ transactionHash: committedTransactionHash }), {
+        let feePayerAuth = null;
+        if (useSponsorForTransaction) {
+            console.log("⚠️ Using sponsored transaction...");
+            feePayerAuth = await aptos.transaction.signAsFeePayer({
+                signer: sponsorAccount,
+                transaction
+            });
+        }
+
+        console.log("✅ Transaction signed!");
+
+        // ✅ 8. Отправляем транзакцию
+        console.log("\n=== 3. Submitting transaction ===\n");
+        const committedTransaction = await aptos.transaction.submit.simple({
+            transaction,
+            senderAuthenticator: senderAuth,
+            feePayerAuthenticator: feePayerAuth, // 🟢 Используем спонсора, если есть
+        });
+
+        console.log("✅ Submitted transaction hash:", committedTransaction.hash);
+
+        return new Response(JSON.stringify({ transactionHash: committedTransaction.hash }), {
             status: 200,
             headers: { "Content-Type": "application/json" }
         });
