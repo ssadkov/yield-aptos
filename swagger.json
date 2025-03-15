@@ -237,6 +237,89 @@
         }
       }
     },
+    "/api/aptos/sponsoredTransfer": {
+    "post": {
+      "tags": ["aptos"],
+      "summary": "Sponsored Transfer on Aptos blockchain",
+      "description": "Transfers APT or a specified token to a recipient address using a sponsor to pay for gas fees.",
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "privateKey": {
+                  "type": "string",
+                  "description": "Sender's private key",
+                  "example": "0xabcdef..."
+                },
+                "receiver": {
+                  "type": "string",
+                  "description": "Recipient wallet address",
+                  "example": "0x123..."
+                },
+                "amount": {
+                  "type": "number",
+                  "description": "Amount to transfer",
+                  "example": 1.5
+                },
+                "token": {
+                  "type": "string",
+                  "description": "Token to transfer (default is Aptos)",
+                  "example": "0x1::aptos_coin::AptosCoin",
+                  "default": "0x1::aptos_coin::AptosCoin"
+                },
+                "useSponsor": {
+                  "type": "boolean",
+                  "description": "Flag to indicate if the transaction should be sponsored",
+                  "example": true
+                }
+              },
+              "required": [
+                "privateKey",
+                "receiver",
+                "amount"
+              ]
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Transaction successful",
+          "content": {
+            "application/json": {
+              "example": {
+                "transactionHash": "0xabcdef123456..."
+              }
+            }
+          }
+        },
+        "400": {
+          "description": "Bad request - missing or invalid parameters",
+          "content": {
+            "application/json": {
+              "example": {
+                "error": "Invalid input"
+              }
+            }
+          }
+        },
+        "500": {
+          "description": "Server error",
+          "content": {
+            "application/json": {
+              "example": {
+                "error": "Transaction failed"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+
     "/api/aptos/transfer": {
       "post": {
         "tags": ["aptos"],
