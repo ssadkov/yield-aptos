@@ -5,7 +5,8 @@ import {
     Network,
     Account,
     AccountAddress,
-    U64
+    U64,
+    InputGenerateTransactionPayloadData
 } from "@aptos-labs/ts-sdk";
 import JOULE_TOKENS from "../../joule/jouleTokens"; // Таблица токенов Joule
 
@@ -27,14 +28,16 @@ export async function POST(req) {
         console.log(`🔹 Initiating transfer: ${amount} ${token || "APT"} to ${receiver}`);
 
         // ✅ Определяем токен
-        let tokenInfo = JOULE_TOKENS.find(t => t.token === token) || {
-            token: "0x1::aptos_coin::AptosCoin",
-            decimals: 1_000_000_000,
-            isFungible: true
-        };
+        let tokenInfo = JOULE_TOKENS.find(t => t.token === token);
+        if (!tokenInfo) {
+            return new Response(JSON.stringify({ error: "Token not found in JOULE_TOKENS" }), {
+                status: 400,
+                headers: { "Content-Type": "application/json" }
+            });
+        }
 
         console.log(`✅ Token info found:`, tokenInfo);
-        const { decimals } = tokenInfo;
+        const { decimals, isFungible } = tokenInfo;
 
         // ✅ Конвертируем сумму в on-chain формат
         const amountOnChain = new U64(amount * decimals);
@@ -48,56 +51,74 @@ export async function POST(req) {
 
         console.log("✅ Sender Account derived:", senderAccount.accountAddress.toString());
 
-        // ✅ Проверяем, зарегистрирован ли `CoinStore` у получателя
-        console.log(`🔍 Checking if receiver has CoinStore for ${tokenInfo.token}...`);
-        let hasCoinStore = true;
+        // ✅ Проверяем, зарегистрирован ли `CoinStore` у получателя (только для `Coin`, не для `Fungible Asset`)
+        if (!isFungible) {
+            console.log(`🔍 Checking if receiver has CoinStore for ${tokenInfo.token}...`);
+            let hasCoinStore = true;
 
-        try {
-            await aptos.getAccountResource({
-                accountAddress: receiver,
-                resourceType: `0x1::coin::CoinStore<${tokenInfo.token}>`
-            });
-            console.log("✅ Receiver has CoinStore!");
-        } catch (error) {
-            console.warn("⚠️ Receiver does NOT have CoinStore! Registering now...");
-            hasCoinStore = false;
+            try {
+                await aptos.getAccountResource({
+                    accountAddress: receiver,
+                    resourceType: `0x1::coin::CoinStore<${tokenInfo.token}>`
+                });
+                console.log("✅ Receiver has CoinStore!");
+            } catch (error) {
+                console.warn("⚠️ Receiver does NOT have CoinStore! Registering now...");
+                hasCoinStore = false;
+            }
+
+            // 🔹 Регистрируем `CoinStore`, если его нет
+            if (!hasCoinStore) {
+                const registerTxn = await aptos.transaction.build.simple({
+                    sender: senderAccount.accountAddress,
+                    data: {
+                        function: "0x1::managed_coin::register",
+                        typeArguments: [tokenInfo.token],
+                        functionArguments: []
+                    }
+                });
+
+                console.log("🔹 Registering CoinStore...");
+                const registerTxHash = await aptos.signAndSubmitTransaction({
+                    signer: senderAccount,
+                    transaction: registerTxn
+                });
+
+                console.log(`✅ CoinStore registered! Tx: ${registerTxHash.hash}`);
+                await aptos.waitForTransaction({ transactionHash: registerTxHash.hash });
+            }
         }
 
-        // 🔹 Регистрируем `CoinStore` у получателя, если нужно
-        if (!hasCoinStore) {
-            const registerTxn = await aptos.transaction.build.simple({
-                sender: senderAccount.accountAddress,
-                data: {
-                    function: "0x1::managed_coin::register",
-                    typeArguments: [tokenInfo.token],
-                    functionArguments: []
-                }
-            });
-
-            console.log("🔹 Registering CoinStore...");
-            const registerTxHash = await aptos.signAndSubmitTransaction({
-                signer: senderAccount,
-                transaction: registerTxn
-            });
-
-            console.log(`✅ CoinStore registered! Tx: ${registerTxHash.hash}`);
-            await aptos.waitForTransaction({ transactionHash: registerTxHash.hash });
-        }
-
-        // ✅ Формируем транзакцию перевода
-        console.log("🔹 Processing as Coin Transfer...");
-        const transaction = await aptos.transaction.build.simple({
-            sender: senderAccount.accountAddress,
-            data: {
+        // ✅ Формируем транзакционные данные
+        let transactionData;
+        if (isFungible) {
+            console.log("🔹 Processing as Fungible Asset Transfer...");
+            transactionData = {
+                function: "0x1::primary_fungible_store::transfer",
+                typeArguments: ["0x1::fungible_asset::Metadata"],
+                functionArguments: [tokenInfo.token, receiver, amountOnChain]
+            };
+        } else {
+            console.log("🔹 Processing as Coin Transfer...");
+            transactionData = {
                 function: "0x1::coin::transfer",
                 typeArguments: [tokenInfo.token],
                 functionArguments: [AccountAddress.from(receiver), amountOnChain]
-            }
+            };
+        }
+
+        console.log("🔹 Transaction data:", transactionData);
+
+        // ✅ 1. Строим транзакцию
+        console.log("\n=== 1. Building transaction ===\n");
+        const transaction = await aptos.transaction.build.simple({
+            sender: senderAccount.accountAddress,
+            data: transactionData
         });
 
         console.log("✅ Transaction built!");
 
-        // ✅ Подписываем и отправляем транзакцию
+        // ✅ 2. Подписываем и отправляем транзакцию
         console.log("🔹 Signing and sending transaction...");
         const committedTransaction = await aptos.signAndSubmitTransaction({
             signer: senderAccount,
