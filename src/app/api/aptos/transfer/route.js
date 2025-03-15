@@ -59,25 +59,26 @@ export async function POST(req) {
             });
             console.log("✅ Receiver account exists!");
         } catch (error) {
-            console.warn("⚠️ Receiver account does NOT exist! Creating account...");
+            console.log("⚠️ Receiver account does NOT exist! Creating account...");
 
-            // 🔹 Создаем аккаунт получателя через `aptos_account::transfer_coins`
+            // 🔹 Создаём аккаунт через `aptos_account::transfer` с 0 APT
             const createAccountTxn = await aptos.transaction.build.simple({
                 sender: senderAccount.accountAddress,
                 data: {
-                    function: "0x1::aptos_account::transfer_coins",
-                    functionArguments: [receiver, new U64(0)]
+                    function: "0x1::aptos_account::transfer",
+                    functionArguments: [receiver, 0] // Отправляем 0 APT, чтобы создать аккаунт
                 }
             });
 
-            console.log("🔹 Creating receiver account...");
+            console.log("🔹 Sending account creation transaction...");
             const createAccountTxHash = await aptos.signAndSubmitTransaction({
                 signer: senderAccount,
                 transaction: createAccountTxn
             });
 
-            console.log(`✅ Receiver account created! Tx: ${createAccountTxHash.hash}`);
+            console.log(`✅ Account created! Tx: ${createAccountTxHash.hash}`);
             await aptos.waitForTransaction({ transactionHash: createAccountTxHash.hash });
+
             receiverExists = false;
         }
 
