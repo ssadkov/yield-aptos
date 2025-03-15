@@ -79,9 +79,9 @@ export async function POST(req) {
             console.log("✅ Sponsor Account derived:", sponsorAccount.accountAddress.toString());
         }
 
-        // ✅ 5. Подготовка данных транзакции
-        const positionId = "1234";
-        const newPosition = true;
+        // ✅ 5. Подготовка данных транзакции!!! ПОТЕСТИТЬ, ТУТ МОГУТ БЫТЬ ОШИБКИ
+        const positionId = "1";
+        const newPosition = false;
 
         let transactionData;
         if (isFungible) {

@@ -4,10 +4,12 @@ import {
     AptosConfig,
     Ed25519PrivateKey,
     Network,
-    PrivateKey
+    PrivateKey,
+    Account
 } from "@aptos-labs/ts-sdk";
 import JOULE_TOKENS from "../../joule/jouleTokens"; // ✅ Используем JOULE_TOKENS вместо ECHELON_TOKENS
 
+// ✅ Настройка подключения к Aptos
 const aptosConfig = new AptosConfig({ network: Network.MAINNET });
 const aptos = new Aptos(aptosConfig);
 
@@ -43,12 +45,12 @@ async function getPoolAddress(token) {
 
 export async function POST(req) {
     try {
-        // 🔎 Читаем JSON из запроса
+        // 🔎 1. Читаем JSON из запроса
         const requestData = await req.json();
         console.log(`🔹 Full request data:`, requestData);
 
         // 🛠 Проверяем входные параметры
-        const { privateKeyHex, token, amount } = requestData;
+        const { privateKeyHex, token, amount, useSponsor } = requestData;
         if (!privateKeyHex || !token || !amount) {
             console.error("❌ Missing required parameters:", { privateKeyHex, token, amount });
             return new Response(JSON.stringify({ error: "Missing required parameters" }), {
@@ -59,12 +61,7 @@ export async function POST(req) {
 
         console.log(`🔹 Initiating LEND: ${amount} ${token}`);
 
-        // 🔎 Проверяем список токенов
-        console.log("🔎 Available tokens in JOULE_TOKENS:", JOULE_TOKENS.map(t => t.token));
-
-        // 🔎 Ищем токен в списке
-        console.log(`🔎 Searching for token: ${token}`);
-
+        // 🔎 2. Ищем токен в JOULE_TOKENS
         const tokenInfo = JOULE_TOKENS.find(t => t.token === token);
         if (!tokenInfo) {
             console.error(`❌ Token not found: ${token}`);
@@ -81,7 +78,7 @@ export async function POST(req) {
         const amountOnChain = BigInt(Math.round(amount * decimals));
         console.log(`🔹 Converted amount: ${amount} → ${amountOnChain} (on-chain)`);
 
-        // ✅ Получаем `poolAddress` для `token`
+        // ✅ 3. Получаем `poolAddress` для `token`
         const poolAddress = await getPoolAddress(token);
         if (!poolAddress) {
             return new Response(JSON.stringify({ error: "Pool address not found for token" }), {
@@ -90,64 +87,101 @@ export async function POST(req) {
             });
         }
 
-        // ✅ Обработка приватного ключа
+        // ✅ 4. Создание аккаунта отправителя
         const privateKey = new Ed25519PrivateKey(PrivateKey.formatPrivateKey(privateKeyHex, "ed25519"));
         const account = await aptos.deriveAccountFromPrivateKey({ privateKey });
 
         const signer = new LocalSigner(account, Network.MAINNET);
         const agent = new AgentRuntime(signer, aptos);
 
-        // ✅ Проверяем баланс пользователя
+        // ✅ 5. Проверяем баланс пользователя
         const userBalance = await aptos.getAccountAPTAmount({ accountAddress: account.accountAddress });
         console.log(`✅ User balance check passed: ${userBalance} APT available`);
 
-        if (userBalance < 0.01) {
-            return new Response(JSON.stringify({ error: "Insufficient APT balance for gas fees" }), {
-                status: 400,
-                headers: { "Content-Type": "application/json" }
+        let sponsorAccount = null;
+        let useSponsorForTransaction = useSponsor || userBalance < 0.01; // Если баланс APT меньше 0.01 → используем спонсора
+
+        if (useSponsorForTransaction) {
+            console.log("⚠️ Using sponsor for transaction...");
+            const sponsorPrivateKey = process.env.SPONSOR_PRIVATE_KEY; // 🟢 Приватный ключ спонсора
+            if (!sponsorPrivateKey) {
+                console.error("❌ Sponsor private key is missing");
+                return new Response(JSON.stringify({ error: "Sponsor private key is missing" }), {
+                    status: 500,
+                    headers: { "Content-Type": "application/json" }
+                });
+            }
+
+            const sponsorEdKey = new Ed25519PrivateKey(sponsorPrivateKey);
+            sponsorAccount = Account.fromPrivateKey({ privateKey: sponsorEdKey });
+            console.log("✅ Sponsor Account derived:", sponsorAccount.accountAddress.toString());
+        }
+
+        // ✅ 6. Формируем данные для транзакции
+        const FUNCTIONAL_ARGS_DATA = [poolAddress, amountOnChain];
+
+        const COIN_STANDARD_DATA = {
+            function: "0xc6bc659f1649553c1a3fa05d9727433dc03843baac29473c817d06d39e7621ba::scripts::supply",
+            typeArguments: [token],
+            functionArguments: FUNCTIONAL_ARGS_DATA,
+        };
+
+        const FUNGIBLE_ASSET_DATA = {
+            function: "0xc6bc659f1649553c1a3fa05d9727433dc03843baac29473c817d06d39e7621ba::scripts::supply_fa",
+            functionArguments: FUNCTIONAL_ARGS_DATA,
+        };
+
+        const transactionData = isFungible ? FUNGIBLE_ASSET_DATA : COIN_STANDARD_DATA;
+        console.log(`🔹 Transaction data:`, transactionData);
+
+        // ✅ 7. Строим транзакцию (с учетом спонсора)
+        console.log("\n=== 1. Building transaction ===\n");
+        const transaction = await agent.aptos.transaction.build.simple({
+            sender: agent.account.getAddress(),
+            withFeePayer: useSponsorForTransaction, // 🟢 Активируем спонсирование, если нужно
+            data: transactionData
+        });
+
+        console.log("✅ Transaction built!");
+
+        // ✅ 8. Подписываем транзакцию отправителем
+        console.log("\n=== 2. Signing transaction ===\n");
+        const senderAuth = await aptos.transaction.sign({
+            signer: account,
+            transaction,
+        });
+
+        let feePayerAuth = null;
+        if (useSponsorForTransaction) {
+            console.log("⚠️ Using sponsored transaction...");
+            feePayerAuth = await aptos.transaction.signAsFeePayer({
+                signer: sponsorAccount,
+                transaction
             });
         }
 
-       // 🔹 Формируем данные для транзакции
-       const FUNCTIONAL_ARGS_DATA = [poolAddress, amountOnChain];
+        console.log("✅ Transaction signed!");
 
-       const COIN_STANDARD_DATA = {
-           function: "0xc6bc659f1649553c1a3fa05d9727433dc03843baac29473c817d06d39e7621ba::scripts::supply",
-           typeArguments: [token],
-           functionArguments: FUNCTIONAL_ARGS_DATA,
-       };
+        // ✅ 9. Отправляем транзакцию
+        console.log("\n=== 3. Submitting transaction ===\n");
+        const committedTransaction = await aptos.transaction.submit.simple({
+            transaction,
+            senderAuthenticator: senderAuth,
+            feePayerAuthenticator: feePayerAuth, // 🟢 Используем спонсора, если есть
+        });
 
-       const FUNGIBLE_ASSET_DATA = {
-           function: "0xc6bc659f1649553c1a3fa05d9727433dc03843baac29473c817d06d39e7621ba::scripts::supply_fa",
-           functionArguments: FUNCTIONAL_ARGS_DATA,
-       };
+        console.log("✅ Submitted transaction hash:", committedTransaction.hash);
 
-       //const isFungible = tokenAddress.split("::").length !== 3;
-       const transactionData = isFungible ? FUNGIBLE_ASSET_DATA : COIN_STANDARD_DATA;
+        return new Response(JSON.stringify({ transactionHash: committedTransaction.hash }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" }
+        });
 
-       console.log(`🔹 Transaction data:`, transactionData);
-
-       // ✅ Строим и отправляем транзакцию
-       const transaction = await agent.aptos.transaction.build.simple({
-           sender: agent.account.getAddress(),
-           data: transactionData,
-       });
-
-       console.log(`✅ Transaction created:`, transaction);
-
-       const committedTransactionHash = await agent.account.sendTransaction(transaction);
-       console.log(`✅ Transaction sent! Hash: ${committedTransactionHash}`);
-
-       return new Response(JSON.stringify({ transactionHash: committedTransactionHash }), {
-           status: 200,
-           headers: { "Content-Type": "application/json" }
-       });
-
-   } catch (error) {
-       console.error("❌ LEND error:", error);
-       return new Response(JSON.stringify({ error: "Failed to execute LEND transaction" }), {
-           status: 500,
-           headers: { "Content-Type": "application/json" }
-       });
+    } catch (error) {
+        console.error("❌ LEND error:", error);
+        return new Response(JSON.stringify({ error: "Failed to execute LEND transaction" }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" }
+        });
     }
 }
