@@ -5,8 +5,7 @@ import {
     Network,
     Account,
     AccountAddress,
-    U64,
-    InputGenerateTransactionPayloadData
+    U64
 } from "@aptos-labs/ts-sdk";
 import JOULE_TOKENS from "../../joule/jouleTokens"; // Таблица токенов Joule
 
@@ -50,6 +49,37 @@ export async function POST(req) {
         });
 
         console.log("✅ Sender Account derived:", senderAccount.accountAddress.toString());
+
+        // ✅ Проверяем, существует ли аккаунт получателя
+        let receiverExists = true;
+        try {
+            await aptos.getAccountResource({
+                accountAddress: receiver,
+                resourceType: "0x1::account::Account"
+            });
+            console.log("✅ Receiver account exists!");
+        } catch (error) {
+            console.warn("⚠️ Receiver account does NOT exist! Creating account...");
+
+            // 🔹 Создаем аккаунт получателя (0 APT)
+            const createAccountTxn = await aptos.transaction.build.simple({
+                sender: senderAccount.accountAddress,
+                data: {
+                    function: "0x1::aptos_account::transfer",
+                    functionArguments: [receiver, new U64(0)]
+                }
+            });
+
+            console.log("🔹 Creating receiver account...");
+            const createAccountTxHash = await aptos.signAndSubmitTransaction({
+                signer: senderAccount,
+                transaction: createAccountTxn
+            });
+
+            console.log(`✅ Receiver account created! Tx: ${createAccountTxHash.hash}`);
+            await aptos.waitForTransaction({ transactionHash: createAccountTxHash.hash });
+            receiverExists = false;
+        }
 
         // ✅ Проверяем, зарегистрирован ли `CoinStore` у получателя (только для `Coin`, не для `Fungible Asset`)
         if (!isFungible) {
