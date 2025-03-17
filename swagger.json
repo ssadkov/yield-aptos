@@ -155,6 +155,93 @@
         }
       }
     },
+    "/api/aptos/panoraSponsoredSwap": {
+        "post": {
+          "tags": ["aptos"],
+          "summary": "Sponsored Swap tokens using Panora",
+          "description": "Swaps tokens from one asset to another using the Panora exchange API with gas sponsorship.",
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "privateKeyHex": {
+                      "type": "string",
+                      "description": "The sender's private key in Hex format",
+                      "example": "0xabcdef12345..."
+                    },
+                    "fromToken": {
+                      "type": "string",
+                      "description": "The token address to swap from",
+                      "example": "0x1::aptos_coin::AptosCoin"
+                    },
+                    "toToken": {
+                      "type": "string",
+                      "description": "The token address to swap to",
+                      "example": "0x2::stable_coin::USDC"
+                    },
+                    "swapAmount": {
+                      "type": "number",
+                      "description": "The amount of the fromToken to swap",
+                      "example": 10
+                    },
+                    "toWalletAddress": {
+                      "type": "string",
+                      "description": "Optional recipient wallet address for receiving the swapped tokens",
+                      "example": "0x6789abcd..."
+                    },
+                    "useSponsor": {
+                      "type": "boolean",
+                      "description": "Flag to indicate if the transaction should be sponsored",
+                      "example": true
+                    }
+                  },
+                  "required": [
+                    "privateKeyHex",
+                    "fromToken",
+                    "toToken",
+                    "swapAmount"
+                  ]
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Successful swap",
+              "content": {
+                "application/json": {
+                  "example": {
+                    "transactionHash": "0xabc123..."
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Bad request - missing or invalid parameters",
+              "content": {
+                "application/json": {
+                  "example": {
+                    "error": "Invalid input parameters"
+                  }
+                }
+              }
+            },
+            "500": {
+              "description": "Server error",
+              "content": {
+                "application/json": {
+                  "example": {
+                    "error": "Swap transaction failed"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },  
     "/api/aptos/panoraSwap": {
       "post": {
         "tags": ["aptos"],
