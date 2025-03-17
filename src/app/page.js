@@ -21,34 +21,33 @@ const ReactMarkdown = dynamic(() => import("react-markdown"), { ssr: false });
 
 const presetActions = [
   {
+    label: "How can I top up my wallet?",
+    tool: "getPositions",
+    params: {},
+    conditions: { loggedIn: true, hasFunds: false }, // Доступно, если у пользователя есть активные позиции
+  },
+  {
+    label: "How can I create crypto wallet?",
+    tool: "createYieldWallet",
+    conditions: { loggedIn: false }, 
+  },{
     label: "Show Top Yield Pools",
     tool: "getPools",
     params: { limit: 5, sortBy: "apy" },
-    conditions: { loggedIn: false, hasFunds: false }, // Доступно, если пользователь залогинен и у него есть средства
+    conditions: {  }, // Доступно, если пользователь залогинен и у него есть средства
   },
   {
     label: "Create new Aptos wallet",
     tool: "createAptosWallet",
     params: {},
-    conditions: { loggedIn: false }, // Доступно только если пользователь НЕ залогинен
+    conditions: { loggedIn: false, hasPositions: true, hasFunds: true }, // Доступно только если пользователь НЕ залогинен
   },
-  {
-    label: "Show My Positions",
-    tool: "getPositions",
-    params: {},
-    conditions: { loggedIn: true, hasPositions: true }, // Доступно, если у пользователя есть активные позиции
-  },
-  {
-    label: "How can I create crypto wallet?",
-    tool: "getSwapLendOptions",
-    params: { minApy: 5 },
-    conditions: { loggedIn: false }, 
-  },
+
   {
     label: "Optimize My Lending Strategy",
     tool: "getBestLendOptions",
     params: {},
-    conditions: { loggedIn: true, hasPositions: true }, // Доступно, если у пользователя есть активные позиции
+    conditions: { loggedIn: true, hasPositions: true, hasFunds: true }, // Доступно, если у пользователя есть активные позиции
   },
 ];
 
@@ -266,68 +265,100 @@ export default function Chat() {
 
   // Функция для демонстрации кнопок до начала диалога
   const handleDirectToolAction = async (toolName, params) => {
-  
+    // Сообщение пользователя в чат
     const userMessage = {
       id: nanoid(),
       role: "user",
       content: `Show me ${toolName.replace(/([A-Z])/g, " $1").toLowerCase()} ${JSON.stringify(params)}`.trim(),
+    };
+  
+    setMessages((prevMessages) => [...prevMessages, userMessage]);
+    setIsLoading(true);
+  
+    let apiUrl = "";
+    let requestBody = null;
+    let method = "GET";
+  
+    // Определяем API-эндпоинт в зависимости от toolName
+    switch (toolName) {
+      case "getPools":
+        apiUrl = `/api/aptos/pools?limit=${params.limit}&sortBy=${params.sortBy}`;
+        break;
+  
+      case "createAptosWallet":
+        apiUrl = "/api/aptos/createWallet";
+        method = "POST";
+        break;
+  
+      case "getPositions":
+        apiUrl = `/api/aptos/positions?address=${params.address}`;
+        break;
+  
+      case "getSwapLendOptions":
+        apiUrl = `/api/aptos/swapLend?minApy=${params.minApy}`;
+        break;
+  
+      case "getBestLendOptions":
+        apiUrl = "/api/aptos/bestLend";
+        method = "POST";
+        requestBody = JSON.stringify({ address: params.address });
+        break;
+  
+      default:
+        console.error(`Unknown tool: ${toolName}`);
+        setIsLoading(false);
+        return;
     }
-
-    setMessages((prevMessages) => [...prevMessages, userMessage])
-    setIsLoading(true)
-
+  
     try {
-      let data;
-      try {
-        const response = await fetch("/api/aptos/createWallet", {
-        //  method: "POST",
-        //  headers: { "Content-Type": "application/json" },
-        });
-    
-        if (!response.ok) {
-          throw new Error("Failed to create wallet");
-        }
-    
-        data = await response.json();
-        console.log("Wallet created:", data);
-      } catch (error) {
-        console.error("Error creating wallet:", error);
+      console.log(`🔄 Calling API: ${apiUrl}`);
+      
+      const response = await fetch(apiUrl, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: requestBody,
+      });
+  
+      if (!response.ok) {
+        throw new Error(`Failed request: ${response.statusText}`);
       }
-    
-      // Add bot response with tool result
+  
+      const data = await response.json();
+      console.log(`✅ API response for ${toolName}:`, data);
+  
+      // Сообщение от бота с результатом
       const botMessage = {
         id: nanoid(),
         role: "assistant",
-        content: `${JSON.stringify(data, null, 2)}`,
-      }
-
-      setMessages((prevMessages) => [...prevMessages, botMessage])
+        content: `🔹 **${toolName.replace(/([A-Z])/g, " $1")}** result:\n\n` + JSON.stringify(data, null, 2),
+      };
+  
+      setMessages((prevMessages) => [...prevMessages, botMessage]);
     } catch (error) {
-      console.error("Error calling tool:", error)
-
-      // Add error message
+      console.error("❌ Error calling tool:", error);
+  
+      // Сообщение об ошибке
       const errorMessage = {
         id: nanoid(),
         role: "assistant",
-        content: "Sorry, there was an error processing your request.",
-      }
-
-      setMessages((prevMessages) => [...prevMessages, errorMessage])
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const filteredActions = presetActions;
+        content: `❌ Error processing **${toolName}**. Please try again later.`,
+      };
   
-  // .filter(action => {
-  //   const { loggedIn, hasFunds, hasPositions } = action.conditions || {};
-  //   return (
-  //     (loggedIn === undefined || loggedIn === !!session) &&
-  //     (hasFunds === undefined || hasFunds === (balances.length > 0 && balances.some(b => parseFloat(b.balance) > 0))) &&
-  //     (hasPositions === undefined || hasPositions === (positions.length > 0))
-  //   );
-  // });
+      setMessages((prevMessages) => [...prevMessages, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+
+  const filteredActions = presetActions.filter(action => {
+    const { loggedIn, hasFunds, hasPositions } = action.conditions || {};
+    return (
+      (loggedIn === undefined || loggedIn === !!session) &&
+      (hasFunds === undefined || hasFunds === (balances.length > 0 && balances.some(b => parseFloat(b.balance) > 0))) // &&
+      // (hasPositions === undefined || hasPositions === (positions.length > 0))
+    );
+  });
   
 
   return (
