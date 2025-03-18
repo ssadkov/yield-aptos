@@ -33,7 +33,7 @@ export async function POST(req: Request) {
         lendAsset,
         swapAndLendAsset,
         bestLend,
-        swapAsset,
+        //swapAsset,
       },
     });
 

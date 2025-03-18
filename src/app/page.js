@@ -14,7 +14,7 @@ import { generateMnemonicForUser } from "@/utils/mnemonic";
 import { Send } from "lucide-react"; // Импортируем иконку Send
 import BestLendStrategy from "@/components/BestLendStrategy"; // Подключаем компонент BestLendStrategy
 import { useSessionData } from "@/context/SessionProvider";
-
+import SwapForm from "@/components/SwapForm"; // Подключаем компонент SwapForm
 
 // Отключаем SSR для react-markdown
 const ReactMarkdown = dynamic(() => import("react-markdown"), { ssr: false });
@@ -282,7 +282,7 @@ export default function Chat() {
     // Определяем API-эндпоинт в зависимости от toolName
     switch (toolName) {
       case "getPools":
-        apiUrl = `/api/aptos/pools?limit=${params.limit}&sortBy=${params.sortBy}`;
+        apiUrl = `/api/aptos/markets?asset=USD`;
         break;
   
       case "createAptosWallet":
@@ -360,6 +360,7 @@ export default function Chat() {
     );
   });
   
+ 
 
   return (
     <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900">
@@ -422,6 +423,8 @@ export default function Chat() {
                         <p className="text-gray-700 dark:text-gray-300 font-semibold flex items-center">
                           🔧 {tool.toolName} was invoked
                         </p>
+
+                        {/* Обработка lending tools */}
                         {(tool.toolName === "lendAsset" || tool.toolName === "bestLend") && tool.result?.token && tool.result?.amount ? (
                           <LendForm
                             protocol={tool.result.protocol}
@@ -431,7 +434,7 @@ export default function Chat() {
                             onLend={handleLendClick}
                             isLending={isLending}
                           />
-                        )  : tool.toolName === "swapAndLendAsset" && tool.result ? (
+                        ) : tool.toolName === "swapAndLendAsset" && tool.result ? (
                           <SwapLendForm
                             protocol={tool.result.protocol}
                             token={tool.result.toToken}
@@ -447,6 +450,16 @@ export default function Chat() {
                             onBotMessage={handleBotMessage}
                             setMessages={setMessages}
                             handleInputChange={handleInputChange}
+                          />
+                        ) : tool.toolName === "swapAsset" && tool.result ? (
+                          <SwapForm
+                            fromAsset={tool.result.fromAsset}
+                            fromProvider={tool.result.fromProvider}
+                            fromTokenType={tool.result.fromTokenType}
+                            toAsset={tool.result.toAsset}
+                            toProvider={tool.result.toProvider}
+                            toTokenType={tool.result.toTokenType}
+                            amount={tool.result.amount}
                           />
                         ) : (
                           <pre className="whitespace-pre-wrap break-words overflow-x-auto w-full">
