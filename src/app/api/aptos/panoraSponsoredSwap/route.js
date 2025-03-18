@@ -5,7 +5,8 @@ import {
     Ed25519PrivateKey,
     Network,
     PrivateKey,
-    Account
+    Account,
+    SigningScheme
 } from "@aptos-labs/ts-sdk";
 import axios from "axios";
 
@@ -21,8 +22,8 @@ export async function POST(req) {
 
         // 🛠 Проверяем входные параметры
         const { privateKeyHex, fromToken, toToken, swapAmount, toWalletAddress, useSponsor } = requestData;
-        if (!privateKeyHex || !fromToken || !toToken || !swapAmount) {
-            console.error("❌ Missing required parameters:", { privateKeyHex, fromToken, toToken, swapAmount });
+        if (!privateKeyHex || !fromToken || !toToken || !swapAmount || !toWalletAddress) {
+            console.error("❌ Missing required parameters:", { privateKeyHex, fromToken, toToken, swapAmount, toWalletAddress });
             return new Response(JSON.stringify({ error: "Missing required parameters" }), {
                 status: 400,
                 headers: { "Content-Type": "application/json" }
@@ -32,18 +33,14 @@ export async function POST(req) {
         console.log(`🔹 Initiating swap: ${swapAmount} ${fromToken} to ${toToken}`);
 
         // ✅ 2. Создание аккаунта отправителя
-        const privateKey = new Ed25519PrivateKey(PrivateKey.formatPrivateKey(privateKeyHex, "ed25519"));
-        const senderAccount = await aptos.deriveAccountFromPrivateKey({ privateKey });
+        const ed25519Key = new Ed25519PrivateKey(privateKeyHex);
+        const senderAccount = Account.fromPrivateKey({ privateKey: ed25519Key, scheme: SigningScheme.Ed25519 });
 
-        const signer = new LocalSigner(senderAccount, Network.MAINNET);
-        const agent = new AgentRuntime(signer, aptos);
+        console.log("✅ Sender Account derived:", senderAccount.accountAddress.toString());
 
-        // ✅ 3. Проверяем баланс пользователя
-        const userBalance = await aptos.getAccountAPTAmount({ accountAddress: senderAccount.accountAddress });
-        console.log(`✅ User balance check passed: ${userBalance} APT available`);
+        let useSponsorForTransaction = useSponsor ?? (userBalance < 0.01); // Если баланс APT меньше 0.01 → используем спонсора
 
         let sponsorAccount = null;
-        let useSponsorForTransaction = useSponsor ?? (userBalance < 0.01); // Если баланс APT меньше 0.01 → используем спонсора
 
         if (useSponsorForTransaction) {
             console.log("⚠️ Using sponsor for transaction...");
@@ -55,13 +52,77 @@ export async function POST(req) {
             console.log("✅ Sponsor Account derived:", sponsorAccount.accountAddress.toString());
         }
 
-        // ✅ 4. Подготовка запроса к Panora
+        // ✅ 3. Проверяем, существует ли аккаунт получателя
+        let receiverExists = true;
+        try {
+            await aptos.getAccountResource({ accountAddress: toWalletAddress, resourceType: "0x1::account::Account" });
+            console.log("✅ Receiver account exists!");
+        } catch (error) {
+            console.log("⚠️ Receiver account does NOT exist! Creating account...");
+
+            // 🔹 Создаем аккаунт через `aptos_account::transfer` с 0 APT
+            const createAccountTxn = await aptos.transaction.build.simple({
+                sender: senderAccount.accountAddress,
+                data: {
+                    function: "0x1::aptos_account::transfer",
+                    functionArguments: [toWalletAddress, 0] // Отправляем 0 APT
+                },
+                withFeePayer: useSponsorForTransaction // ✅ Добавляем оплату спонсором
+            });
+            
+            // Подписываем транзакцию отправителем
+            const senderAuth = await aptos.transaction.sign({
+                signer: senderAccount,
+                transaction: createAccountTxn
+            });
+
+            
+    
+
+            
+            let feePayerAuth = null;
+            if (useSponsorForTransaction) {
+                console.log("⚠️ Using sponsor for account creation...");
+                feePayerAuth = await aptos.transaction.signAsFeePayer({
+                    signer: sponsorAccount,
+                    transaction: createAccountTxn
+                });
+            }
+            
+            // ✅ Отправляем транзакцию с feePayer (если нужно)
+            const createAccountTxHash = await aptos.transaction.submit.simple({
+                transaction: createAccountTxn,
+                senderAuthenticator: senderAuth,
+                feePayerAuthenticator: feePayerAuth
+            });
+            
+            
+            console.log(`✅ Account created! Tx: ${createAccountTxHash.hash}`);
+            await aptos.waitForTransaction({ transactionHash: createAccountTxHash.hash });
+
+            receiverExists = false;
+        }
+
+        // ✅ 4. Создание подписчика и агента
+        const privateKey = new Ed25519PrivateKey(PrivateKey.formatPrivateKey(privateKeyHex, "ed25519"));
+        const senderAccount1 = await aptos.deriveAccountFromPrivateKey({ privateKey });
+
+        const signer = new LocalSigner(senderAccount1, Network.MAINNET);
+        const agent = new AgentRuntime(signer, aptos);
+
+        // ✅ 5. Проверяем баланс пользователя
+        const userBalance = await aptos.getAccountAPTAmount({ accountAddress: senderAccount1.accountAddress });
+        console.log(`✅ User balance check passed: ${userBalance} APT available`);
+
+       
+
+        // ✅ 6. Получаем котировку Panora
         console.log("🔹 Fetching swap quote from Panora...");
         const panoraParameters = {
             fromTokenAddress: fromToken,
             toTokenAddress: toToken,
             fromTokenAmount: swapAmount.toString(),
-            toWalletAddress: toWalletAddress ? toWalletAddress : senderAccount.accountAddress.toString(),
+            toWalletAddress
         };
 
         const url = `https://api.panora.exchange/swap?${new URLSearchParams(panoraParameters).toString()}`;
@@ -80,20 +141,20 @@ export async function POST(req) {
         console.log(`✅ Swap quote received!`);
         const transactionData = response.quotes[0].txData;
 
-        // ✅ 5. Формируем транзакцию
+        // ✅ 7. Формируем транзакцию
         const transaction = await agent.aptos.transaction.build.simple({
             sender: agent.account.getAddress(),
             data: {
                 function: transactionData.function,
                 typeArguments: transactionData.type_arguments,
-                functionArguments: transactionData.arguments,
+                functionArguments: transactionData.arguments
             },
             withFeePayer: useSponsorForTransaction // ✅ Включаем спонсора, если нужно
         });
 
         console.log("✅ Transaction built!");
 
-        // ✅ 6. Подписываем транзакцию отправителем
+        // ✅ 8. Подписываем транзакцию отправителем
         console.log("\n=== 2. Signing transaction ===\n");
         const senderAuth = await aptos.transaction.sign({
             signer: senderAccount,
@@ -111,12 +172,12 @@ export async function POST(req) {
 
         console.log("✅ Transaction signed!");
 
-        // ✅ 7. Отправляем транзакцию
+        // ✅ 9. Отправляем транзакцию
         console.log("\n=== 3. Submitting transaction ===\n");
         const committedTransaction = await aptos.transaction.submit.simple({
             transaction,
             senderAuthenticator: senderAuth,
-            feePayerAuthenticator: feePayerAuth, // 🟢 Используем спонсора, если есть
+            feePayerAuthenticator: feePayerAuth // 🟢 Используем спонсора, если есть
         });
 
         console.log("✅ Submitted transaction hash:", committedTransaction.hash);

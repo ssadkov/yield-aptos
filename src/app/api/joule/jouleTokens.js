@@ -103,14 +103,15 @@ const JOULE_TOKENS = [
     provider: "Move Dollar",
     token: "0x6f986d146e4a90b828d8c12c14b6f4e003fdff11a8eecceceb63744363eaac01::mod_coin::MOD",
     decimals: 100000000,
-    isFungible: true
+    isFungible: false,
+    icon: "https://raw.githubusercontent.com/PanoraExchange/Aptos-Tokens/main/logos/MOD.svg"
   },
   {
     assetName: "THL",
     provider: "Thala",
     token: "0x7fd500c11216f0fe3095d0c4b8aa4d64a4e2e04f83758462f2b127255643615::thl_coin::THL",
     decimals: 100000000,
-    isFungible: true
+    isFungible: false
   },  
   {
     assetName: "USDT",

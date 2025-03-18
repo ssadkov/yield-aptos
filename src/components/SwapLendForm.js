@@ -40,42 +40,26 @@ export default function SwapLendForm({ protocol, token, amount, swapToken, onSwa
 
   const handleSwapAndLend = async () => {
     setIsProcessing(true);
-    handleBotMessage("🔄 Starting Swap & Lend...");
-  
     let privateKeyHex;
     let toWalletAddress;
     let lendBalance = 0;
-    const walletAddress = localStorage.getItem("aptosWalletAddress");
-  
-    if (!walletAddress) {
-      handleBotMessage("❌ Wallet address not found. Please log in.");
-      setIsProcessing(false);
-      return;
-    }
   
     try {
-      // 1️⃣ Проверяем, хватает ли APT на газ
-      const aptosBalance = await checkTokenBalance(walletAddress, "0x1::aptos_coin::AptosCoin");
-      const isSponsored = aptosBalance < 0.05;
-      
-      handleBotMessage(isSponsored 
-        ? "🟡 Low APT balance detected. Using Sponsored Swap." 
-        : "✅ APT balance sufficient for gas. Using standard swap."
-      );
+      handleBotMessage("🔄 Initiating Swap...");
   
-      // 2️⃣ Достаем email и userId
+      // Проверяем, есть ли email и userId в localStorage
       const email = localStorage.getItem("userEmail");
       const userId = localStorage.getItem("userId");
-  
       if (!email || !userId) {
         alert("❌ User email or ID not found. Please log in.");
-        handleBotMessage("❌ Swap & Lend failed. User not logged in.");
         return;
       }
   
-      // 3️⃣ Восстанавливаем кошелек
+      // Генерируем мнемоническую фразу
       const mnemonic = generateMnemonicForUser(email, userId);
+  
       try {
+        // Восстанавливаем кошелек
         const walletResponse = await fetch("/api/aptos/restoreWalletFromMnemonic", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -85,20 +69,27 @@ export default function SwapLendForm({ protocol, token, amount, swapToken, onSwa
         const walletData = await walletResponse.json();
         if (!walletData.privateKeyHex) {
           handleBotMessage("❌ Failed to retrieve private key.");
+          setIsProcessing(false);
           return;
         }
   
         privateKeyHex = walletData.privateKeyHex;
         toWalletAddress = walletData.address;
+  
+        console.log("🔑 Private Key Retrieved:", privateKeyHex, " Address:", toWalletAddress);
       } catch (error) {
         console.error("❌ Error retrieving wallet data:", error);
-        handleBotMessage("❌ Error retrieving wallet data.");
+        setIsProcessing(false);
         return;
       }
   
-      // 4️⃣ Выбираем API для свапа (обычный или спонсорский)
-      const swapApi = isSponsored ? "/api/aptos/panoraSponsoredSwap" : "/api/aptos/panoraSwap";
+      // Определяем, будет ли swap спонсорский
+      const useSponsor = isSponsored; // Если мало APT, используем sponsored transaction
   
+      // Выбираем API: обычный Swap или Sponsored Swap
+      const swapApiUrl = useSponsor ? "/api/aptos/panoraSponsoredSwap" : "/api/aptos/panoraSwap";
+  
+      // Формируем payload для Swap
       const requestBody = {
         privateKeyHex,
         fromToken: swapToken,
@@ -107,9 +98,15 @@ export default function SwapLendForm({ protocol, token, amount, swapToken, onSwa
         toWalletAddress,
       };
   
-      handleBotMessage(`🔄 Swapping ${formatAmount(amount)} ${swapToken} for ${token}...`);
+      // Добавляем `useSponsor`, если swap спонсорский
+      if (useSponsor) {
+        requestBody.useSponsor = true;
+      }
   
-      const swapResponse = await fetch(swapApi, {
+      console.log("🔄 Swap Request Body:", requestBody);
+  
+      // Отправляем запрос на swap
+      const swapResponse = await fetch(swapApiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requestBody),
@@ -119,15 +116,22 @@ export default function SwapLendForm({ protocol, token, amount, swapToken, onSwa
   
       if (swapData.transactionHash) {
         const explorerLink = `https://explorer.aptoslabs.com/txn/${swapData.transactionHash}?network=mainnet`;
-        handleBotMessage(`✅ Swap successful! [View transaction](${explorerLink})`);
+        handleBotMessage(`✅ Swap transaction successful!\n🔗 [View on Explorer](${explorerLink})`);
+  
+        // Проверяем новый баланс после свапа
         lendBalance = await checkTokenBalance(toWalletAddress, token);
+        handleBotMessage(`✅ New balance after swap: ${lendBalance}`);
       } else {
         console.error("❌ Swap failed:", swapData.error);
-        handleBotMessage("❌ Swap failed.");
+        handleBotMessage(`❌ Swap failed: ${swapData.error}`);
+        setIsProcessing(false);
         return;
       }
   
-      // 5️⃣ Готовим LEND-запрос
+      // 🏦 Проводим Lend после успешного Swap
+      handleBotMessage(`🔄 Initiating Lend on ${protocol}...`);
+  
+      // Определяем API для лендинга
       const apiEndpoint =
         protocol === "Joule"
           ? "/api/joule/lend"
@@ -137,22 +141,23 @@ export default function SwapLendForm({ protocol, token, amount, swapToken, onSwa
   
       if (!apiEndpoint) {
         handleBotMessage(`❌ Unsupported protocol: ${protocol}`);
+        setIsProcessing(false);
         return;
       }
   
+      // Формируем payload для Lend
       const requestLendBody = {
         privateKeyHex,
         token,
         amount: lendBalance,
       };
   
+      // Если протокол Joule, добавляем positionId
       if (protocol === "Joule") {
         requestLendBody.positionId = "1";
       }
   
-      // 6️⃣ Отправляем LEND-запрос
-      handleBotMessage(`🔄 Lending ${lendBalance} ${token} on ${protocol}...`);
-  
+      // Отправляем запрос на Lend
       const lendResponse = await fetch(apiEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -163,18 +168,20 @@ export default function SwapLendForm({ protocol, token, amount, swapToken, onSwa
   
       if (lendData.transactionHash) {
         const explorerLink = `https://explorer.aptoslabs.com/txn/${lendData.transactionHash}?network=mainnet`;
-        handleBotMessage(`✅ Lend successful! [View transaction](${explorerLink})`);
+        handleBotMessage(`✅ Lend transaction successful on ${protocol}!\n🔗 [View on Explorer](${explorerLink})`);
       } else {
         console.error("❌ Lend failed:", lendData.error);
-        handleBotMessage("❌ Lend failed.");
+        handleBotMessage(`❌ Lend transaction failed on ${protocol}.`);
       }
+  
     } catch (error) {
-      console.error("❌ Error during Swap & Lend:", error);
-      handleBotMessage("❌ Error during Swap & Lend.");
+      console.error("❌ Error during swap and lend:", error);
+      handleBotMessage(`❌ Error during swap and lend: ${error.message}`);
     } finally {
       setIsProcessing(false);
     }
   };
+  
   
 
   const getTokenInfo = (tokenAddress) => JOULE_TOKENS.find((t) => t.token === tokenAddress) || {};
