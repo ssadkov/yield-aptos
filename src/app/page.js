@@ -441,6 +441,7 @@ export default function Chat() {
                             swapToken={tool.result.fromToken}
                             amount={tool.result.amount}
                             onSwap={handleSwapAndLendClick} // Используем handleSwapAndLendClick
+                            handleBotMessage={handleBotMessage} // Передаем функцию
                           />
                         ) : tool.toolName === "getPools" && tool.result?.table ? (
                           <PoolsTable
