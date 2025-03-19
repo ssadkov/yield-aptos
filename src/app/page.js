@@ -15,6 +15,7 @@ import { Send } from "lucide-react"; // Импортируем иконку Send
 import BestLendStrategy from "@/components/BestLendStrategy"; // Подключаем компонент BestLendStrategy
 import { useSessionData } from "@/context/SessionProvider";
 import SwapForm from "@/components/SwapForm"; // Подключаем компонент SwapForm
+import BalancesTable from "@/components/WalletTable"; // Подключаем компонент BalancesTable
 
 // Отключаем SSR для react-markdown
 const ReactMarkdown = dynamic(() => import("react-markdown"), { ssr: false });
@@ -462,6 +463,12 @@ export default function Chat() {
                             toTokenType={tool.result.toTokenType}
                             amount={tool.result.amount}
                           />
+                         ) :tool.toolName === "walletPositions" && tool.result?.table ? (
+                            <BalancesTable
+                              balances={tool.result.table.filter((row) => row.protocol === "-")} // Фильтруем только балансы (без позиций)
+                              positions={tool.result.table.filter((row) => row.protocol !== "-")} // Фильтруем только позиции
+                              onSupplyClick={handleSupplyClick}
+                            /> 
                         ) : (
                           <pre className="whitespace-pre-wrap break-words overflow-x-auto w-full">
                             {JSON.stringify(tool.result, null, 2)}

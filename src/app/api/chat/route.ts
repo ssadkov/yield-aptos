@@ -5,10 +5,10 @@ import getPools from "@/app/api/chat/tools/getPools";
 import lendAsset from "@/app/api/chat/tools/lendAsset";
 import swapAndLendAsset from "./tools/swapLendAsset";
 import bestLend from "./tools/bestLendAsset";
-import swapAsset from "./tools/swapAsset";
+//import swapAsset from "./tools/swapAsset";
+import walletPositions from "./tools/walletPositions";
 
 export const maxDuration = 30;
-
 export async function POST(req: Request) {
   try {
     const { messages, email, userId } = await req.json();
@@ -33,6 +33,7 @@ export async function POST(req: Request) {
         lendAsset,
         swapAndLendAsset,
         bestLend,
+        walletPositions,
         //swapAsset,
       },
     });

@@ -31,6 +31,7 @@ export default function BalancesTable({ balances, positions, onSupplyClick }) {
         <tbody>
           {balances.map((row, idx) => {
             const tokenIcon = getTokenIcon(row.asset);
+    
             return (
               <tr key={idx} className="bg-white dark:bg-gray-800">
                 <td className="border border-gray-400 p-2">
@@ -53,6 +54,8 @@ export default function BalancesTable({ balances, positions, onSupplyClick }) {
             );
           })}
           {positions.map((row, idx) => {
+              console.log("🛠️ Debug position row:", row); // Логируем перед рендерингом
+
             const tokenIcon = getTokenIcon(row.asset);
             const protocolIcon = PROTOCOL_ICONS[row.protocol];
             return (
@@ -64,7 +67,7 @@ export default function BalancesTable({ balances, positions, onSupplyClick }) {
                   </div>
                 </td>
                 <td className="border border-gray-400 p-2">{row.provider}</td>
-                <td className="border border-gray-400 p-2 font-bold">{parseFloat(row.amount).toFixed(4)}</td>
+                <td className="border border-gray-400 p-2 font-bold">{parseFloat(row.balance).toFixed(4)}</td>
                 <td className="border border-gray-400 p-2">
                   <div className="flex items-center">
                     {protocolIcon && <img src={protocolIcon} alt={row.protocol} className="w-5 h-5 mr-2" />}
