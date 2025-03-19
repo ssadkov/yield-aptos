@@ -24,6 +24,69 @@
     }
   ],
   "paths": {
+    "/api/aptos/balances": {
+      "get": {
+        "tags": ["aptos"],
+        "summary": "Get all token balances for a specific Aptos address",
+        "description": "Fetches balances for all tracked tokens associated with the given Aptos address.",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "query",
+            "required": true,
+            "description": "Aptos wallet address",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response with token balances",
+            "content": {
+              "application/json": {
+                "example": {
+                  "balances": [
+                    {
+                      "asset": "APT",
+                      "provider": "Aptos",
+                      "token": "0x1::aptos_coin::AptosCoin",
+                      "balance": 150.25
+                    },
+                    {
+                      "asset": "USDC",
+                      "provider": "LayerZero USDC",
+                      "token": "0xf22bede2::asset::USDC",
+                      "balance": 250.75
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing or invalid address parameter",
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "Missing address parameter"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "Internal server error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/aptos/checkBalance": {
       "get": {
         "tags": ["aptos"],
