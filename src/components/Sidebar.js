@@ -351,6 +351,15 @@ export default function Sidebar() {
                           >
                             {loadingStrategy[pos.token] ? "🔄" : "🚀"}
                           </button>
+                          <button
+                            onClick={() => handleWithdraw(pos)}
+                            className={`ml-2 text-gray-500 hover:text-yellow-500 text-sm ${
+                              loadingStrategy[pos.token] ? "opacity-50 cursor-not-allowed" : ""
+                            }`}
+                            disabled={loadingStrategy[pos.token]}
+                          >
+                            {loadingStrategy[pos.token] ? "🔄" : "➡️"}
+                          </button>
                         </li>
                       ))}
                   </ul>
@@ -377,6 +386,15 @@ export default function Sidebar() {
                             disabled={loadingStrategy[pos.token]}
                           >
                             {loadingStrategy[pos.token] ? "🔄" : "🚀"}
+                          </button>
+                          <button
+                            onClick={() => handleWithdraw(pos)}
+                            className={`ml-2 text-gray-500 hover:text-yellow-500 text-sm ${
+                              loadingStrategy[pos.token] ? "opacity-50 cursor-not-allowed" : ""
+                            }`}
+                            disabled={loadingStrategy[pos.token]}
+                          >
+                            {loadingStrategy[pos.token] ? "🔄" : "➡️"}
                           </button>
                         </li>
                       ))}

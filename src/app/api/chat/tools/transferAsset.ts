@@ -1,46 +1,43 @@
 import { tool } from "ai";
 import { z } from "zod";
-import JOULE_TOKENS from "@/app/api/joule/jouleTokens";
 
-export const SUPPORTED_PROTOCOLS = ["Joule", "Echelon"]; // Экспортируем список поддерживаемых протоколов
-
-const lendAsset = tool({
-  description: "Lends an asset on the selected protocol (Joule, Echelon).",
+const transferAsset = tool({
+  description: "Transfers an asset to a specified Aptos wallet address.",
   parameters: z.object({
-    protocol: z.string().describe("The lending protocol to use (Joule or Echelon)."),
-    asset: z.string().describe("The asset name (e.g., USDC, APT, BTC, ETH)."),
-    provider: z.string().optional().describe("The provider name (only required if token type is not provided)."),
-    amount: z.number().describe("The exact amount of the asset to lend."),
-    tokenType: z.string().optional().describe("The token type (if already available, provider is not required)."),
+    receiver: z.string().describe("The recipient's Aptos wallet address."),
+    amount: z.number().describe("The exact amount of the asset to transfer."),
+    token: z.string().describe("The token address to transfer (e.g., 0x1::aptos_coin::AptosCoin)."),
   }),
-  execute: async ({ protocol, asset, provider, amount, tokenType }) => {
+  execute: async ({ receiver, amount, token }) => {
     try {
-      console.log("🔍 lendAsset request:", { protocol, asset, provider, amount, tokenType });
+      console.log("🔍 transferAsset request:", { receiver, amount, token });
 
-      let tokenAddress = tokenType;
-
-      if (!tokenAddress) {
-        let tokenData;
-
-        if (!tokenAddress) {
-          if (!provider) throw new Error("❌ Provider is required if token type is not provided.");
-          tokenData = JOULE_TOKENS.find((t) => t.assetName === asset && t.provider === provider);
-          
-          if (!tokenData) throw new Error(`❌ Token not found for ${asset} (${provider}) in ${protocol}`);
-          tokenAddress = tokenData.token;
-        }
-
-        if (amount <= 0 || isNaN(amount)) throw new Error(`❌ Invalid amount: ${amount}`);
+      if (!receiver || !token) {
+        throw new Error("❌ Receiver address and token must be provided.");
       }
-      return {
-        protocol,
-        token: tokenAddress,
-        amount: amount.toFixed(6),
-      };
+
+      if (amount <= 0 || isNaN(amount)) throw new Error(`❌ Invalid amount: ${amount}`);
+
+      console.log(`🔄 Transferring ${amount} ${token} to ${receiver}...`);
+
+      // Выполняем API-запрос на отправку перевода
+      const response = await fetch("/api/aptos/transfer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ privateKey: "retrieved_private_key", receiver, amount, token }),
+      });
+
+      const data = await response.json();
+      if (!data.transactionHash) {
+        throw new Error(data.error || "Unknown error during transfer.");
+      }
+
+      console.log(`✅ Transfer successful! Tx: ${data.transactionHash}`);
+      return { transactionHash: data.transactionHash };
     } catch (error) {
       return { error: error.message };
     }
   },
 });
 
-export default lendAsset;
+export default transferAsset;
