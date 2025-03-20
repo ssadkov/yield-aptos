@@ -477,7 +477,7 @@ export default function Chat() {
                             protocol={tool.result.protocol}
                             token={tool.result.token}
                             amount={tool.result.amount}
-                            setMessages={setMessages}
+                            handleBotMessage={handleBotMessage} // Передаем функцию
                           />
                         ) : (
                           <pre className="whitespace-pre-wrap break-words overflow-x-auto w-full">

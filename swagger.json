@@ -731,6 +731,82 @@
         }
       }
     },
+    "/api/echelon/withdraw": {
+      "post": {
+        "tags": ["echelon"],
+        "summary": "Withdraw tokens from an Echelon pool",
+        "description": "Withdraws the specified tokens from the Echelon protocol.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "privateKeyHex": {
+                    "type": "string",
+                    "description": "User's private key in Hex format",
+                    "example": "0x5fd6...."
+                  },
+                  "token": {
+                    "type": "string",
+                    "description": "Token address to be withdrawn",
+                    "example": "0x357b0b74bc833e95a115ad22604854d6b0fca151cecd94111770e5d6ffc9dc2b"
+                  },
+                  "amount": {
+                    "type": "number",
+                    "description": "Amount of tokens to withdraw",
+                    "example": 10
+                  },
+                  "useSponsor": {
+                    "type": "boolean",
+                    "description": "Flag to indicate if the transaction should be sponsored",
+                    "example": true
+                  }
+                },
+                "required": [
+                  "privateKeyHex",
+                  "token",
+                  "amount"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful transaction",
+            "content": {
+              "application/json": {
+                "example": {
+                  "transactionHash": "0xabc..."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing or invalid parameters",
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "Invalid input"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "Withdraw transaction failed"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/hello": {
       "get": {
         "tags": ["general"],
@@ -766,7 +842,7 @@
                   },
                   "token": {
                     "type": "string",
-                    "example": "0x357b0b74bc833e95a115ad22604854d6b0fca151cecd94111770e5d6ffc9dc2b::asset::USDT"
+                    "example": "0x357b0b74bc833e95a115ad22604854d6b0fca151cecd94111770e5d6ffc9dc2b"
                   },
                   "amount": {
                     "type": "number",
