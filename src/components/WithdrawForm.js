@@ -23,11 +23,9 @@ export default function WithdrawForm({ protocol, token, amount, handleBotMessage
         throw new Error("❌ User email or ID not found. Please log in.");
       }
 
-      // Генерируем мнемоническую фразу
       console.log("🔑 Generating mnemonic...");
       const mnemonic = generateMnemonicForUser(email, userId);
 
-      // Восстанавливаем кошелек
       console.log("🔄 Restoring wallet from mnemonic...");
       const walletResponse = await fetch("/api/aptos/restoreWalletFromMnemonic", {
         method: "POST",
@@ -65,8 +63,26 @@ export default function WithdrawForm({ protocol, token, amount, handleBotMessage
           throw new Error(data.error || "Unknown error");
         }
       } else if (protocol === "Echelon") {
-        console.log("⚠️ Withdraw for Echelon is not implemented yet.");
-        alert("🚧 Withdraw for Echelon is not implemented yet.");
+        console.log("🚀 Sending withdrawal request to Echelon...");
+        const response = await fetch("/api/echelon/withdraw", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            privateKeyHex,
+            token,
+            amount,
+            useSponsor: true
+          }),
+        });
+
+        const data = await response.json();
+        
+        if (data.transactionHash) {
+          console.log("Withdrawal Transaction Hash:", data.transactionHash);
+          handleBotMessage(`Withdraw Tx: ${data.transactionHash}`);
+        } else {
+          throw new Error(data.error || "Unknown error");
+        }
       } else {
         throw new Error("❌ Unsupported protocol");
       }

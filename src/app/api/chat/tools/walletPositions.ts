@@ -34,7 +34,7 @@ const walletPositions = tool({
         asset: balance.asset,
         provider: balance.provider,
         token: balance.token,
-        balance: isNaN(parseFloat(balance.balance)) ? "0" : parseFloat(balance.balance).toFixed(6), // ✅ Исправлено
+        balance: isNaN(parseFloat(balance.balance)) ? "0" : parseFloat(balance.balance).toFixed(10), // ✅ Исправлено
         protocol: "-",
         market: "-",
         supplyApr: "-",
@@ -43,7 +43,7 @@ const walletPositions = tool({
         asset: position.asset,
         provider: position.provider,
         token: position.token,
-        balance: isNaN(parseFloat(position.amount)) ? "0" : parseFloat(position.amount).toFixed(6), // ✅ Исправлено
+        balance: isNaN(parseFloat(position.amount)) ? "0" : parseFloat(position.amount).toFixed(10), // ✅ Исправлено
         protocol: position.protocol,
         market: position.market || "-",
         supplyApr: `${position.supplyApr}%`,
