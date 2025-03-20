@@ -7,6 +7,7 @@ import swapAndLendAsset from "./tools/swapLendAsset";
 import bestLend from "./tools/bestLendAsset";
 //import swapAsset from "./tools/swapAsset";
 import walletPositions from "./tools/walletPositions";
+import withdrawAsset from "./tools/withdrawAsset";
 
 export const maxDuration = 30;
 export async function POST(req: Request) {
@@ -34,6 +35,7 @@ export async function POST(req: Request) {
         swapAndLendAsset,
         bestLend,
         walletPositions,
+        withdrawAsset,
         //swapAsset,
       },
     });

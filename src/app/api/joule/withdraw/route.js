@@ -1,20 +1,25 @@
 import { AgentRuntime, LocalSigner } from "move-agent-kit";
-import { Aptos, AptosConfig, Ed25519PrivateKey, Network, PrivateKey } from "@aptos-labs/ts-sdk";
-import JOULE_TOKENS from "../jouleTokens"; // Импорт таблицы токенов
+import { 
+    Aptos, 
+    AptosConfig, 
+    Ed25519PrivateKey, 
+    Network, 
+    PrivateKey 
+} from "@aptos-labs/ts-sdk";
+import JOULE_TOKENS from "../jouleTokens";
 
 console.log("🚀 Запуск вывода токенов из пула Joule...");
 
-// **Настроим Aptos SDK**
+// ✅ Инициализация Aptos SDK
 const aptosConfig = new AptosConfig({ network: Network.MAINNET });
 const aptos = new Aptos(aptosConfig);
 
 export async function POST(req) {
     try {
         const { privateKeyHex, positionId, amount, token } = await req.json();
-
         console.log(`🔹 Initiating WITHDRAW: ${amount} ${token}`);
 
-        // ✅ Определяем информацию о токене из JOULE_TOKENS
+        // ✅ Проверяем информацию о токене
         const tokenInfo = JOULE_TOKENS.find(t => t.token === token);
         if (!tokenInfo) {
             console.error(`❌ Token not found: ${token}`);
@@ -26,31 +31,53 @@ export async function POST(req) {
 
         console.log(`✅ Token info found:`, tokenInfo);
         const { decimals, isFungible } = tokenInfo;
-
-        console.log(`🔹 isFungible: ${isFungible}`);
         const amountOnChain = BigInt(Math.round(amount * decimals));
         console.log(`🔹 Converted amount: ${amount} → ${amountOnChain} (on-chain)`);
 
-        // **Создаем подписанта**
+        // ✅ Создаём аккаунт отправителя
         const privateKey = new Ed25519PrivateKey(PrivateKey.formatPrivateKey(privateKeyHex, "ed25519"));
-        const account = await aptos.deriveAccountFromPrivateKey({ privateKey });
+        const senderAccount = await aptos.deriveAccountFromPrivateKey({ privateKey });
 
-        const signer = new LocalSigner(account, Network.MAINNET);
+        const signer = new LocalSigner(senderAccount, Network.MAINNET);
         const agent = new AgentRuntime(signer, aptos);
         console.log("✅ Agent initialized.");
 
-        // **Получаем Pyth Update Data**
+        // ✅ Проверяем баланс APT для оплаты газа
+        const aptBalance = await aptos.getAccountAPTAmount({ accountAddress: senderAccount.accountAddress });
+        console.log(`💰 Sender APT Balance: ${aptBalance} APT`);
+
+        let useSponsor = aptBalance < 0.01; // ✅ Если APT < 0.01, используем спонсора
+
+        let sponsorAccount = null;
+        if (useSponsor) {
+            console.log("⚠️ Using sponsor for transaction...");
+            const sponsorPrivateKey = process.env.SPONSOR_PRIVATE_KEY;
+            if (!sponsorPrivateKey) {
+                console.error("❌ Sponsor private key is missing");
+                return new Response(JSON.stringify({ error: "Sponsor private key is missing" }), {
+                    status: 500,
+                    headers: { "Content-Type": "application/json" }
+                });
+            }
+
+            const sponsorEdKey = new Ed25519PrivateKey(PrivateKey.formatPrivateKey(sponsorPrivateKey, "ed25519"));
+            sponsorAccount = await aptos.deriveAccountFromPrivateKey({ privateKey: sponsorEdKey });
+
+            console.log("✅ Sponsor Account derived:", sponsorAccount.accountAddress.toString());
+        }
+
+        // ✅ Получаем Pyth Update Data
         console.log("🔹 Fetching Pyth Update Data...");
         const pyth_update_data = await agent.getPythData();
         console.log(`✅ Pyth Update Data received.`);
 
-        // **Создаем транзакционные данные**
+        // ✅ Создаём транзакционные данные
         const transactionData = isFungible
             ? {
                 function: "0x2fe576faa841347a9b1b32c869685deb75a15e3f62dfe37cbd6d52cc403a16f6::pool::withdraw_fa",
                 functionArguments: [
                     positionId.toString(),
-                    token.split("::")[0], // ✅ Передаем **только адрес токена**
+                    token.split("::")[0], // ✅ Передаём только адрес токена
                     amountOnChain,
                     pyth_update_data
                 ]
@@ -71,27 +98,41 @@ export async function POST(req) {
         const transaction = await agent.aptos.transaction.build.simple({
             sender: agent.account.getAddress(),
             data: transactionData,
+            withFeePayer: useSponsor // ✅ Добавляем fee payer, если требуется
         });
 
-        console.log("🔹 Sending transaction...");
-        const committedTransactionHash = await agent.account.sendTransaction(transaction);
-        console.log(`✅ Transaction sent! Hash: ${committedTransactionHash}`);
-
-        console.log("🔹 Waiting for transaction confirmation...");
-        const signedTransaction = await agent.aptos.waitForTransaction({
-            transactionHash: committedTransactionHash,
+        console.log("🔹 Signing transaction...");
+        const senderAuth = await aptos.transaction.sign({
+            signer: senderAccount,
+            transaction
         });
 
-        if (!signedTransaction.success) {
-            console.error("❌ Error: Token withdraw failed", signedTransaction);
-            throw new Error("Token withdraw failed");
+        let feePayerAuth = null;
+        if (useSponsor) {
+            console.log("⚠️ Signing transaction with fee payer...");
+            feePayerAuth = await aptos.transaction.signAsFeePayer({
+                signer: sponsorAccount,
+                transaction
+            });
         }
 
-        console.log("✅ Withdrawal successful! 🚀 Transaction:", signedTransaction.hash);
-        return new Response(JSON.stringify({ transactionHash: signedTransaction.hash }), {
+        console.log("✅ Transaction signed!");
+
+        // ✅ Отправляем транзакцию
+        console.log("\n=== 3. Submitting transaction ===\n");
+        const committedTransaction = await aptos.transaction.submit.simple({
+            transaction,
+            senderAuthenticator: senderAuth,
+            feePayerAuthenticator: feePayerAuth, // ✅ Используем fee payer, если есть
+        });
+
+        console.log("✅ Submitted transaction hash:", committedTransaction.hash);
+
+        return new Response(JSON.stringify({ transactionHash: committedTransaction.hash }), {
             status: 200,
             headers: { "Content-Type": "application/json" }
         });
+
     } catch (error) {
         console.error("❌ Error during withdrawal:", error);
         return new Response(JSON.stringify({ error: "Withdraw failed", details: error.message }), {

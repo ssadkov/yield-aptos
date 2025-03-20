@@ -16,6 +16,7 @@ import BestLendStrategy from "@/components/BestLendStrategy"; // Подключ�
 import { useSessionData } from "@/context/SessionProvider";
 import SwapForm from "@/components/SwapForm"; // Подключаем компонент SwapForm
 import BalancesTable from "@/components/WalletTable"; // Подключаем компонент BalancesTable
+import WithdrawForm from "@/components/WithdrawForm"; // Подключаем компонент WithdrawForm
 
 // Отключаем SSR для react-markdown
 const ReactMarkdown = dynamic(() => import("react-markdown"), { ssr: false });
@@ -471,6 +472,13 @@ export default function Chat() {
                               handleInputChange={handleInputChange}
                               setMessages={setMessages}
                             /> 
+                        ) : tool.toolName === "withdrawAsset" && tool.result ? (
+                          <WithdrawForm
+                            protocol={tool.result.protocol}
+                            token={tool.result.token}
+                            amount={tool.result.amount}
+                            setMessages={setMessages}
+                          />
                         ) : (
                           <pre className="whitespace-pre-wrap break-words overflow-x-auto w-full">
                             {JSON.stringify(tool.result, null, 2)}

@@ -2,8 +2,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
 const formatAmount = (amount) => {
-  // Округляем до 6 знаков после запятой (или можно менять это число)
-  return Number(amount).toFixed(6).replace(/\.?0+$/, '');
+  // Округляем до 8 знаков после запятой (или можно менять это число)
+  return Number(amount).toFixed(8).replace(/\.?0+$/, '');
 };
 
 // В вашем компоненте:
