@@ -29,7 +29,7 @@ export default function SwapLendForm({ protocol, token, amount, swapToken, onSwa
 
   useEffect(() => {
     async function checkSponsored() {
-      const walletAddress = localStorage.getItem("aptosWalletAddress");
+        const walletAddress = localStorage.getItem("aptosWalletAddress");
       if (!walletAddress) return;
 
       const aptosBalance = await checkTokenBalance(walletAddress, "0x1::aptos_coin::AptosCoin");

@@ -1,37 +1,65 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import JOULE_TOKENS from "@/app/api/joule/jouleTokens";
 import PROTOCOL_ICONS from "@/app/api/aptos/markets/protocolIcons";
 import { nanoid } from "nanoid";
 
-export default function BalancesTable({ balances, positions, onSupplyClick }) {
+export default function WalletTable({ balances, positions, onTransferClick, onBestLendClick, setMessages, handleInputChange }) {
+  const [isAIAgentWallet, setIsAIAgentWallet] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const walletAddress = localStorage.getItem("aptosWalletAddress");
+      setIsAIAgentWallet(!!walletAddress); // Преобразуем в `true/false`
+    }
+  }, []);
+
   const getTokenIcon = (asset) => {
     const tokenData = JOULE_TOKENS.find((t) => t.assetName === asset);
     return tokenData ? tokenData.icon : null;
   };
 
+  const handleWithdrawClick = async (position) => {
+    console.log("🔴 Withdraw initiated for:", position);
+
+    const withdrawMessage = `Withdraw **${position.asset}** (token: ${position.token}) from **${position.protocol}**.${position.protocol === "Echelon" ? `\nMarket: ${position.market}` : ""}`;
+    
+    // Отправляем в чат
+    setMessages((prevMessages) => [
+      ...prevMessages,
+      {
+        id: nanoid(),
+        role: "assistant",
+        type: "form",
+        content: `${withdrawMessage}\n💰 Enter amount (default: all)`,
+        position,
+      },
+    ]);
+
+    // Устанавливаем в поле ввода всю сумму по умолчанию
+    handleInputChange({
+      target: { value: `${position.balance}` },
+    });
+  };
+
   return (
     <div className="mt-2 overflow-x-auto w-full">
-      <p className="text-green-600 dark:text-green-400 font-bold">
-        ✅ Wallet Balances & Positions
-      </p>
+      {/* Assets Table */}
+      <p className="text-green-600 dark:text-green-400 font-bold">✅ Assets</p>
       <table className="w-full border-collapse border border-gray-400 dark:border-gray-600">
         <thead>
           <tr className="bg-gray-500 dark:bg-gray-700 text-white">
             <th className="border border-gray-400 p-2">Asset</th>
             <th className="border border-gray-400 p-2">Provider</th>
             <th className="border border-gray-400 p-2">Balance</th>
-            <th className="border border-gray-400 p-2">Protocol</th>
-            <th className="border border-gray-400 p-2">Market</th>
-            <th className="border border-gray-400 p-2">Supply APR</th>
-            <th className="border border-gray-400 p-2">Action</th>
+            {isAIAgentWallet && <th className="border border-gray-400 p-2">Actions</th>}
           </tr>
         </thead>
         <tbody>
           {balances.map((row, idx) => {
             const tokenIcon = getTokenIcon(row.asset);
-    
             return (
               <tr key={idx} className="bg-white dark:bg-gray-800">
                 <td className="border border-gray-400 p-2">
@@ -42,22 +70,40 @@ export default function BalancesTable({ balances, positions, onSupplyClick }) {
                 </td>
                 <td className="border border-gray-400 p-2">{row.provider}</td>
                 <td className="border border-gray-400 p-2 font-bold">{parseFloat(row.balance).toFixed(4)}</td>
-                <td className="border border-gray-400 p-2">-</td>
-                <td className="border border-gray-400 p-2">-</td>
-                <td className="border border-gray-400 p-2">-</td>
-                <td className="border border-gray-400 p-2">
-                  <Button className="bg-green-500 text-white px-4 py-1 rounded" onClick={() => onSupplyClick(row)}>
-                    Supply
-                  </Button>
-                </td>
+                {isAIAgentWallet && (
+                  <td className="border border-gray-400 p-2 flex gap-2">
+                    <Button className="bg-blue-500 text-white px-4 py-1 rounded" onClick={() => onTransferClick(row)}>
+                      Transfer
+                    </Button>
+                    <Button className="bg-yellow-500 text-white px-4 py-1 rounded" onClick={() => onBestLendClick(row)}>
+                      Best Lend
+                    </Button>
+                  </td>
+                )}
               </tr>
             );
           })}
-          {positions.map((row, idx) => {
-              console.log("🛠️ Debug position row:", row); // Логируем перед рендерингом
+        </tbody>
+      </table>
 
+      {/* Positions Table */}
+      <p className="text-green-600 dark:text-green-400 font-bold mt-6">✅ Positions</p>
+      <table className="w-full border-collapse border border-gray-400 dark:border-gray-600">
+        <thead>
+          <tr className="bg-gray-500 dark:bg-gray-700 text-white">
+            <th className="border border-gray-400 p-2">Asset</th>
+            <th className="border border-gray-400 p-2">Provider</th>
+            <th className="border border-gray-400 p-2">Balance</th>
+            <th className="border border-gray-400 p-2">Protocol</th>
+            <th className="border border-gray-400 p-2">Supply APR</th>
+            {isAIAgentWallet && <th className="border border-gray-400 p-2">Action</th>}
+          </tr>
+        </thead>
+        <tbody>
+          {positions.map((row, idx) => {
             const tokenIcon = getTokenIcon(row.asset);
             const protocolIcon = PROTOCOL_ICONS[row.protocol];
+
             return (
               <tr key={balances.length + idx} className="bg-white dark:bg-gray-800">
                 <td className="border border-gray-400 p-2">
@@ -74,13 +120,16 @@ export default function BalancesTable({ balances, positions, onSupplyClick }) {
                     <span>{row.protocol}</span>
                   </div>
                 </td>
-                <td className="border border-gray-400 p-2">{row.market || "-"}</td>
-                <td className="border border-gray-400 p-2 font-bold">{row.supplyApr ? `${parseFloat(row.supplyApr).toFixed(2)}%` : "-"}</td>
-                <td className="border border-gray-400 p-2">
-                  <Button className="bg-green-500 text-white px-4 py-1 rounded" onClick={() => onSupplyClick(row)}>
-                    Supply
-                  </Button>
+                <td className="border border-gray-400 p-2 font-bold">
+                  {row.supplyApr ? `${parseFloat(row.supplyApr).toFixed(2)}%` : "-"}
                 </td>
+                {isAIAgentWallet && (
+                  <td className="border border-gray-400 p-2">
+                    <Button className="bg-red-500 text-white px-4 py-1 rounded" onClick={() => handleWithdrawClick(row)}>
+                      Withdraw
+                    </Button>
+                  </td>
+                )}
               </tr>
             );
           })}

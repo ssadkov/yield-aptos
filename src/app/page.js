@@ -468,6 +468,8 @@ export default function Chat() {
                               balances={tool.result.table.filter((row) => row.protocol === "-")} // Фильтруем только балансы (без позиций)
                               positions={tool.result.table.filter((row) => row.protocol !== "-")} // Фильтруем только позиции
                               onSupplyClick={handleSupplyClick}
+                              handleInputChange={handleInputChange}
+                              setMessages={setMessages}
                             /> 
                         ) : (
                           <pre className="whitespace-pre-wrap break-words overflow-x-auto w-full">
