@@ -16,6 +16,7 @@ export function SessionProvider({ children, session }) {
 function SessionContextProvider({ children }) {
   const { data: session, status } = useSession();
   const [sessionData, setSessionData] = useState(session);
+  const [messages, setMessages] = useState([]); // ✅ Добавляем сообщения в контекст
 
   useEffect(() => {
     console.log("Session updated:", session, status);
@@ -24,8 +25,22 @@ function SessionContextProvider({ children }) {
     }
   }, [session, status]);
 
+  // ✅ Функция для отправки сообщений в чат
+  const handleBotMessage = (message) => {
+    console.log("📩 Adding bot message:", message);
+    setMessages((prev) => {
+      console.log("📩 Messages before update:", prev);
+      const updatedMessages = [
+        ...prev,
+        { id: Date.now(), role: "assistant", content: message },
+      ];
+      console.log("✅ Messages after update:", updatedMessages);
+      return updatedMessages;
+    });
+  };
+
   return (
-    <SessionContext.Provider value={{ session: sessionData, status }}>
+    <SessionContext.Provider value={{ session: sessionData, status, messages, setMessages, handleBotMessage }}>
       {children}
     </SessionContext.Provider>
   );

@@ -33,9 +33,9 @@ const presetActions = [
     tool: "createYieldWallet",
     conditions: { loggedIn: false }, 
   },{
-    label: "Show Top Yield Pools",
+    label: "Show Top USD Pools",
     tool: "getPools",
-    params: { limit: 5, sortBy: "apy" },
+    params: {  },
     conditions: {  }, // Доступно, если пользователь залогинен и у него есть средства
   },
   {
@@ -59,7 +59,9 @@ export default function Chat() {
     maxSteps: 5,
   });
 
-  const { session } = useSessionData();
+  // const { session } = useSessionData();
+  const { session, handleBotMessage } = useSessionData(); // ✅ Добавили handleBotMessage 
+
 
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
@@ -79,6 +81,8 @@ export default function Chat() {
 
 
   useEffect(() => {
+        console.log("📩 Chat component re-rendered. Current messages:", messages);
+
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
@@ -104,16 +108,16 @@ export default function Chat() {
     }
   };
 
-  const handleBotMessage = (message) => {
-    setMessages((prevMessages) => [
-      ...prevMessages,
-      {
-        id: nanoid(),
-        role: "assistant",
-        content: message,
-      },
-    ]);
-  };
+  // handleBotMessage = (message) => {
+  //   setMessages((prevMessages) => [
+  //     ...prevMessages,
+  //     {
+  //       id: nanoid(),
+  //       role: "assistant",
+  //       content: message,
+  //     },
+  //   ]);
+  // };
 
   const handleSubmitWithUserData = async (e) => {
     e.preventDefault();
@@ -266,91 +270,84 @@ export default function Chat() {
   };
 
   // Функция для демонстрации кнопок до начала диалога
-  const handleDirectToolAction = async (toolName, params) => {
-    // Сообщение пользователя в чат
-    const userMessage = {
-      id: nanoid(),
-      role: "user",
-      content: `Show me ${toolName.replace(/([A-Z])/g, " $1").toLowerCase()} ${JSON.stringify(params)}`.trim(),
-    };
-  
-    setMessages((prevMessages) => [...prevMessages, userMessage]);
-    setIsLoading(true);
-  
-    let apiUrl = "";
-    let requestBody = null;
-    let method = "GET";
-  
-    // Определяем API-эндпоинт в зависимости от toolName
+const handleDirectToolAction = async (toolName, params) => {
+  const walletAddress = localStorage.getItem("aptosWalletAddress");
+
+  setIsLoading(true);
+
+  let apiUrl = "";
+  let method = "GET";
+  let requestBody = null;
+
+  try {
     switch (toolName) {
       case "getPools":
         apiUrl = `/api/aptos/markets?asset=USD`;
         break;
-  
+
       case "createAptosWallet":
-        apiUrl = "/api/aptos/createWallet";
-        method = "POST";
+        apiUrl = `/api/aptos/createWallet`;
         break;
-  
+
       case "getPositions":
-        apiUrl = `/api/aptos/positions?address=${params.address}`;
+        if (!walletAddress) throw new Error("Wallet address not found");
+        apiUrl = `/api/aptos/positions?address=${walletAddress}`;
         break;
-  
-      case "getSwapLendOptions":
-        apiUrl = `/api/aptos/swapLend?minApy=${params.minApy}`;
-        break;
-  
+
       case "getBestLendOptions":
-        apiUrl = "/api/aptos/bestLend";
+        if (!walletAddress) throw new Error("Wallet address not found");
+        apiUrl = `/api/aptos/bestLend`;
         method = "POST";
-        requestBody = JSON.stringify({ address: params.address });
+        requestBody = JSON.stringify({ address: walletAddress });
         break;
-  
+
+      case "getSwapLendOptions":
+        apiUrl = `/api/aptos/swapLend?minApy=${params?.minApy || 5}`;
+        break;
+
       default:
-        console.error(`Unknown tool: ${toolName}`);
-        setIsLoading(false);
-        return;
+        throw new Error(`Unknown tool: ${toolName}`);
     }
-  
-    try {
-      console.log(`🔄 Calling API: ${apiUrl}`);
-      
-      const response = await fetch(apiUrl, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: requestBody,
-      });
-  
-      if (!response.ok) {
-        throw new Error(`Failed request: ${response.statusText}`);
+
+    const response = await fetch(apiUrl, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: method === "POST" ? requestBody : null,
+    });
+
+    if (!response.ok) throw new Error(`API error: ${response.statusText}`);
+
+    const result = await response.json();
+
+    // Используем append для добавления toolInvocations
+    await append(
+      {
+        role: "user",
+        content: `Run tool: ${toolName} USD`,
+      },
+      {
+        toolResults: [
+          {
+            toolName,
+            input: params,
+            result,
+          },
+        ],
       }
+    );
+  } catch (error) {
+    console.error("❌ Tool invocation failed:", error);
+
+    await append({
+      role: "assistant",
+      content: `❌ Failed to run **${toolName}**: ${error.message}`,
+    });
+  } finally {
+    setIsLoading(false);
+  }
+};
+
   
-      const data = await response.json();
-      console.log(`✅ API response for ${toolName}:`, data);
-  
-      // Сообщение от бота с результатом
-      const botMessage = {
-        id: nanoid(),
-        role: "assistant",
-        content: `🔹 **${toolName.replace(/([A-Z])/g, " $1")}** result:\n\n` + JSON.stringify(data, null, 2),
-      };
-  
-      setMessages((prevMessages) => [...prevMessages, botMessage]);
-    } catch (error) {
-      console.error("❌ Error calling tool:", error);
-  
-      // Сообщение об ошибке
-      const errorMessage = {
-        id: nanoid(),
-        role: "assistant",
-        content: `❌ Error processing **${toolName}**. Please try again later.`,
-      };
-  
-      setMessages((prevMessages) => [...prevMessages, errorMessage]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
   
 
   const filteredActions = presetActions.filter(action => {

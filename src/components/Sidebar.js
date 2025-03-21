@@ -20,6 +20,9 @@ export default function Sidebar() {
   const [loading, setLoading] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false); // ✅ Новый state для UI
   const [loadingStrategy, setLoadingStrategy] = useState({});
+  const { handleBotMessage } = useSessionData(); // ✅ Используем handleBotMessage
+
+  
 
   console.log("🔄 Sidebar session status:", status, session);
 
@@ -54,6 +57,37 @@ export default function Sidebar() {
         .catch((err) => console.error("Request error:", err));
     }
   }, [session]);
+
+
+  const handleWithdraw = async (pos) => {
+    console.log("🔹 Initiating WITHDRAW: ", pos.amount, pos.token);
+    if (!handleBotMessage) {
+      console.error("❌ handleBotMessage is undefined!");
+      return;
+    }
+
+    handleBotMessage(`➡️ Processing withdrawal for ${pos.amount} ${pos.token}...`);
+    console.log("✅ handleBotMessage called successfully!");
+
+
+    // try {
+    //   const response = await fetch("/api/withdraw", {
+    //     method: "POST",
+    //     headers: { "Content-Type": "application/json" },
+    //     body: JSON.stringify({ token: pos.token, amount: pos.amount }),
+    //   });
+
+    //   const data = await response.json();
+
+    //   if (data.transactionHash) {
+    //     handleBotMessage(`✅ Withdrawal successful! Tx: ${data.transactionHash}`);
+    //   } else {
+    //     handleBotMessage(`❌ Withdrawal failed: ${data.error || "Unknown error"}`);
+    //   }
+    // } catch (error) {
+    //   handleBotMessage(`❌ Error processing withdrawal: ${error.message}`);
+    // }
+  };
 
   const fetchBalances = async (address = aptosAddress) => {
     if (!address) {
@@ -123,6 +157,8 @@ export default function Sidebar() {
       return [];
     }
   };
+
+  
   
   const fetchEchelonPositions = async (address) => {
     try {
@@ -130,7 +166,7 @@ export default function Sidebar() {
       const res = await fetch(`/api/echelon/userPositions?address=${address}`);
       const data = await res.json();
   
-      console.log("📊 Raw Echelon positions:", data.userPositions);
+     // console.log("📊 Raw Echelon positions:", data.userPositions);
   
       if (!data?.userPositions?.length) return [];
   
