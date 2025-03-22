@@ -17,6 +17,7 @@ import { useSessionData } from "@/context/SessionProvider";
 import SwapForm from "@/components/SwapForm"; // Подключаем компонент SwapForm
 import BalancesTable from "@/components/WalletTable"; // Подключаем компонент BalancesTable
 import WithdrawForm from "@/components/WithdrawForm"; // Подключаем компонент WithdrawForm
+import remarkGfm from "remark-gfm";
 
 // Отключаем SSR для react-markdown
 const ReactMarkdown = dynamic(() => import("react-markdown"), { ssr: false });
@@ -24,7 +25,7 @@ const ReactMarkdown = dynamic(() => import("react-markdown"), { ssr: false });
 const presetActions = [
   {
     label: "How can I top up my wallet?",
-    tool: "getPositions",
+    tool: "topUpWallet",
     params: {},
     conditions: { loggedIn: true, hasFunds: false }, // Доступно, если у пользователя есть активные позиции
   },
@@ -391,6 +392,7 @@ export default function Chat() {
                             onBotMessage={handleBotMessage}
                             setMessages={setMessages}
                             handleInputChange={handleInputChange}
+                            append={append} // ✅ передаём
                           />
                         ) : tool.toolName === "swapAsset" && tool.result ? (
                           <SwapForm
@@ -417,15 +419,20 @@ export default function Chat() {
                             amount={tool.result.amount}
                             handleBotMessage={handleBotMessage} // Передаем функцию
                           />
+                        ) : tool.result?.message ? (
+                          <div className="prose prose-sm dark:prose-invert leading-relaxed">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{tool.result.message}</ReactMarkdown>
+                          </div>
                         ) : (
                           <pre className="whitespace-pre-wrap break-words overflow-x-auto w-full">
                             {JSON.stringify(tool.result, null, 2)}
                           </pre>
-                        )}
+                        )
+                        }
                       </div>
                     ))
                   ) : (
-                    <ReactMarkdown components={{ p: "span" }}>{m.content}</ReactMarkdown>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ p: "span" }}>{m.content}</ReactMarkdown>
                   )}
                 </div>
               ))}
@@ -440,22 +447,31 @@ export default function Chat() {
             ) : null}
 
  {/* Новые кнопки до старта диалога */}
- {showQuickActions && (
-                <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 mb-4">
-                  <h3 className="text-lg font-medium mb-3">Quick Actions</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                   {filteredActions.map((action, index) => (
-                   <button
-                  key={index}
-                  className="bg-white dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-left p-3 rounded-lg shadow-sm transition-colors"
-                  onClick={() => handleDirectToolAction(action.tool, action.params)}
-                   >
-                  {action.label}
-                </button>
-              ))}
-               </div>
+            {showQuickActions && (
+              <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 mb-4">
+                <h3 className="text-lg font-medium mb-3">Quick Actions</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {filteredActions.map((action, index) => {
+                    const isTopUpWallet = action.tool === "topUpWallet";
+                    const dynamicParams = isTopUpWallet
+                      ? { ...action.params, address: userAddress }
+                      : action.params;
+
+                    return (
+                      <button
+                        key={index}
+                        className="bg-white dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-left p-3 rounded-lg shadow-sm transition-colors"
+                        onClick={() => handleDirectToolAction(action.tool, dynamicParams)}
+                        disabled={isTopUpWallet && !userAddress}
+                      >
+                        {action.label}
+                      </button>
+                    );
+                  })}
                 </div>
-              )}
+              </div>
+            )}
+
 
             <form onSubmit={handleSubmitWithUserData} className="flex gap-2 p-4 border-t">
               <Input className="flex-1 p-2 border rounded-lg" value={input} placeholder="Type a message" onChange={handleInputChange} disabled={status === "submitted" || status === "streaming"} />

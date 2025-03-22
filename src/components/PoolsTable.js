@@ -6,7 +6,7 @@ import PROTOCOL_ICONS from "@/app/api/aptos/markets/protocolIcons";
 import { nanoid } from "nanoid";
 
 
-export default function PoolsTable({ pools, balances, onSupplyClick, onBotMessage, setMessages, handleInputChange   }) {
+export default function PoolsTable({ pools, balances, onSupplyClick, onBotMessage, setMessages, handleInputChange, append   }) {
   const hasToken = (token) => balances.some((b) => b.asset === token && parseFloat(b.balance) > 0);
   const hasAnyBalance = balances.length > 0 && balances.some((b) => parseFloat(b.balance) > 0.01);
 
@@ -18,6 +18,24 @@ export default function PoolsTable({ pools, balances, onSupplyClick, onBotMessag
 
 
   const hasWallet = typeof window !== "undefined" && localStorage.getItem("aptosWalletAddress");
+
+  const handleTopUpClick = () => {
+    const walletAddress = typeof window !== "undefined" && localStorage.getItem("aptosWalletAddress");
+  
+    if (!walletAddress) {
+      onBotMessage("❌ Wallet address not found. Please sign in.");
+      return;
+    }
+  
+
+    
+    append({
+      role: "user",
+      content: `topUpWallet address=${walletAddress}`,
+    });
+    
+  };
+  
 
   const handleSwapAndSupplyClick = async (pool) => {
     console.log("🔄 Swap and Supply started for:", pool);
@@ -153,7 +171,8 @@ export default function PoolsTable({ pools, balances, onSupplyClick, onBotMessag
                     </Button>
                   ) : (
                   hasWallet ? (
-                      <Button className="bg-red-500 text-white px-4 py-1 rounded">
+                      <Button className="bg-red-500 text-white px-4 py-1 rounded" 
+                      onClick={handleTopUpClick}>
                         Top up wallet
                       </Button>
                     ) : (
