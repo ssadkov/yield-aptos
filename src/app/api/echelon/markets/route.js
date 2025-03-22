@@ -21,7 +21,7 @@ export async function GET() {
     // Получаем список всех рынков
     const markets = await client.getAllMarkets();
     // Выводим список всех функций EchelonClient
-    console.log("Available methods:", Object.keys(Object.getPrototypeOf(client)));
+    //console.log("Available methods:", Object.keys(Object.getPrototypeOf(client)));
 
     // Массив для хранения информации о каждом рынке
     const marketData = [];

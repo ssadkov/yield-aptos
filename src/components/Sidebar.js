@@ -27,17 +27,19 @@ export default function Sidebar() {
   console.log("🔄 Sidebar session status:", status, session);
 
   // ✅ Реагируем на изменения `session`
-  useEffect(() => {
-    if (status === "authenticated" && session) {
-      console.log("✅ Пользователь залогинен:", session.user.email);
-      setIsLoggedIn(true); // Обновляем UI
+  const [initialized, setInitialized] = useState(false);
 
-      // Генерируем кошелек
+  useEffect(() => {
+    if (status === "authenticated" && session && !initialized) {
+      console.log("✅ Пользователь залогинен:", session.user.email);
+      setIsLoggedIn(true);
+      setInitialized(true); // ⬅️ больше не запустится
+  
       const generatedMnemonic = generateMnemonicForUser(session.user.email, session.user.id);
       localStorage.setItem("userEmail", session.user.email);
       localStorage.setItem("userId", session.user.id);
       setMnemonic(generatedMnemonic);
-
+  
       fetch("/api/aptos/restoreWalletFromMnemonic", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -48,7 +50,7 @@ export default function Sidebar() {
           if (data.address) {
             setAptosAddress(data.address);
             localStorage.setItem("aptosWalletAddress", data.address);
-            fetchBalances(data.address);
+            fetchBalances(data.address);         // ✅ вызывается один раз
             fetchUserPositions(data.address);
           } else {
             console.error("API Error:", data.error);
@@ -56,7 +58,8 @@ export default function Sidebar() {
         })
         .catch((err) => console.error("Request error:", err));
     }
-  }, [session]);
+  }, [session, status, initialized]);
+  
 
 
   const handleWithdraw = async (pos) => {
