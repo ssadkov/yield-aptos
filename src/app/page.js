@@ -35,8 +35,8 @@ const presetActions = [
   },{
     label: "Show Top USD Pools",
     tool: "getPools",
-    params: {  },
-    conditions: {  }, // Доступно, если пользователь залогинен и у него есть средства
+    params: { asset: "USD" }, // <-- вот здесь
+    conditions: {},
   },
   {
     label: "Create new Aptos wallet",
@@ -270,83 +270,27 @@ export default function Chat() {
   };
 
   // Функция для демонстрации кнопок до начала диалога
-const handleDirectToolAction = async (toolName, params) => {
-  const walletAddress = localStorage.getItem("aptosWalletAddress");
-
-  setIsLoading(true);
-
-  let apiUrl = "";
-  let method = "GET";
-  let requestBody = null;
-
-  try {
-    switch (toolName) {
-      case "getPools":
-        apiUrl = `/api/aptos/markets?asset=USD`;
-        break;
-
-      case "createAptosWallet":
-        apiUrl = `/api/aptos/createWallet`;
-        break;
-
-      case "getPositions":
-        if (!walletAddress) throw new Error("Wallet address not found");
-        apiUrl = `/api/aptos/positions?address=${walletAddress}`;
-        break;
-
-      case "getBestLendOptions":
-        if (!walletAddress) throw new Error("Wallet address not found");
-        apiUrl = `/api/aptos/bestLend`;
-        method = "POST";
-        requestBody = JSON.stringify({ address: walletAddress });
-        break;
-
-      case "getSwapLendOptions":
-        apiUrl = `/api/aptos/swapLend?minApy=${params?.minApy || 5}`;
-        break;
-
-      default:
-        throw new Error(`Unknown tool: ${toolName}`);
+  const handleDirectToolAction = async (toolName, params) => {
+    let input = toolName;
+  
+    // Допиши параметры в строку (если есть)
+    if (params && Object.keys(params).length > 0) {
+      const paramStr = Object.entries(params)
+        .map(([key, value]) => `${key}=${value}`)
+        .join(" ");
+      input = `${toolName} ${paramStr}`;
     }
-
-    const response = await fetch(apiUrl, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: method === "POST" ? requestBody : null,
-    });
-
-    if (!response.ok) throw new Error(`API error: ${response.statusText}`);
-
-    const result = await response.json();
-
-    // Используем append для добавления toolInvocations
-    await append(
-      {
+  
+    try {
+      await append({
         role: "user",
-        content: `Run tool: ${toolName} USD`,
-      },
-      {
-        toolResults: [
-          {
-            toolName,
-            input: params,
-            result,
-          },
-        ],
-      }
-    );
-  } catch (error) {
-    console.error("❌ Tool invocation failed:", error);
-
-    await append({
-      role: "assistant",
-      content: `❌ Failed to run **${toolName}**: ${error.message}`,
-    });
-  } finally {
-    setIsLoading(false);
-  }
-};
-
+        content: input,
+      });
+    } catch (error) {
+      console.error("❌ Error sending quick action via append:", error);
+    }
+  };
+  
   
   
 
