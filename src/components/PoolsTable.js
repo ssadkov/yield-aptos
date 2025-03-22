@@ -16,6 +16,9 @@ export default function PoolsTable({ pools, balances, onSupplyClick, onBotMessag
     return tokenData ? tokenData.icon : null;
   };
 
+
+  const hasWallet = typeof window !== "undefined" && localStorage.getItem("aptosWalletAddress");
+
   const handleSwapAndSupplyClick = async (pool) => {
     console.log("🔄 Swap and Supply started for:", pool);
 
@@ -149,9 +152,14 @@ export default function PoolsTable({ pools, balances, onSupplyClick, onBotMessag
                       Swap and Supply
                     </Button>
                   ) : (
-                    <Button className="bg-red-500 text-white px-4 py-1 rounded">
-                      Top up wallet
-                    </Button>
+                  hasWallet ? (
+                      <Button className="bg-red-500 text-white px-4 py-1 rounded">
+                        Top up wallet
+                      </Button>
+                    ) : (
+                      <span className="text-sm text-gray-500 italic">Sign in to use wallet</span>
+                    )
+                    
                   )}
                 </td>
               </tr>
@@ -159,6 +167,7 @@ export default function PoolsTable({ pools, balances, onSupplyClick, onBotMessag
           })}
         </tbody>
       </table>
+      Type <i>Show pools for APT (or ETH, BTC)</i> to see the list of available pools for lending.
     </div>
   );
 }

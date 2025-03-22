@@ -298,7 +298,15 @@ export default function Sidebar() {
                 <div className="flex items-center justify-center w-full mb-2 relative">
                 <p className="text-sm truncate mx-auto">{session.user.email}</p>
                 <button 
-                  onClick={() => signOut()} 
+                  onClick={() => {
+                    // Очистка данных из localStorage
+                    localStorage.removeItem("aptosWalletAddress");
+                    localStorage.removeItem("userEmail");
+                    localStorage.removeItem("userId");
+                  
+                    // Выход из сессии
+                    signOut();
+                  }}                  
                   className="absolute right-0 p-1 rounded-md bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500 transition"
                   title="Sign out"
                 >

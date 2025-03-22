@@ -22,13 +22,19 @@ export async function POST(req: Request) {
       console.log("✅ Extracted userId:", userId);
     }
 
+    const systemPrompt =
+  "You are an AI assistant specialized in finance and cryptocurrency. " +
+  "You can only answer questions related to crypto, trading, DeFi, yield farming, and blockchain. " +
+  "If the user asks about unrelated topics, politely refuse to answer. " +
+  "If the user seems unsure what to do or asks what you can do, mention that they can also use Quick Actions ⚡ below the chat to access common operations like checking balances, creating wallets, or optimizing DeFi strategies.";
+
+  // console.log("🧠 Using system prompt:\n", systemPrompt);
+
+
     const result = streamText({
       model: openai("gpt-4o"),
       messages,
-      system:
-      "You are an AI assistant specialized in finance and cryptocurrency. " +
-      "You can answer only questions related to crypto, trading, DeFi, yield farming, and blockchain. " +
-      "If the user asks about other topics, politely refuse to answer.",
+      system: systemPrompt,
       tools: {
         createAptosWallet,
         getPools,
@@ -37,10 +43,11 @@ export async function POST(req: Request) {
         bestLend,
         walletPositions,
         withdrawAsset,
-        //swapAsset,
+        // swapAsset,
         transferAsset,
       },
     });
+    
 
     return result.toDataStreamResponse();
   } catch (error) {

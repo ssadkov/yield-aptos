@@ -11,7 +11,7 @@ import SwapLendForm from "@/components/SwapLendForm"; // Новый компон
 import { nanoid } from "nanoid";
 import dynamic from "next/dynamic";
 import { generateMnemonicForUser } from "@/utils/mnemonic";
-import { Send } from "lucide-react"; // Импортируем иконку Send
+import { Send, Zap } from "lucide-react"; // Импортируем иконку Send
 import BestLendStrategy from "@/components/BestLendStrategy"; // Подключаем компонент BestLendStrategy
 import { useSessionData } from "@/context/SessionProvider";
 import SwapForm from "@/components/SwapForm"; // Подключаем компонент SwapForm
@@ -38,12 +38,12 @@ const presetActions = [
     params: { asset: "USD" }, // <-- вот здесь
     conditions: {},
   },
-  {
-    label: "Create new Aptos wallet",
-    tool: "createAptosWallet",
-    params: {},
-    conditions: { loggedIn: false, hasPositions: true, hasFunds: true }, // Доступно только если пользователь НЕ залогинен
-  },
+  // {
+  //   label: "Create new Aptos wallet",
+  //   tool: "createAptosWallet",
+  //   params: {},
+  //   conditions: { loggedIn: false, hasPositions: true, hasFunds: true }, // Доступно только если пользователь НЕ залогинен
+  // },
 
   {
     label: "Optimize My Lending Strategy",
@@ -76,6 +76,8 @@ export default function Chat() {
   const [lendAmount, setLendAmount] = useState(null);
   const [lendToken, setLendToken] = useState(null);
   const [isLoading, setIsLoading] = useState(false)
+  const [showQuickActions, setShowQuickActions] = useState(messages.length === 0);
+
 
 
 
@@ -84,6 +86,11 @@ export default function Chat() {
         console.log("📩 Chat component re-rendered. Current messages:", messages);
 
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+
+    if (messages.length > 0) {
+      setShowQuickActions(false);
+    }
+  
   }, [messages]);
 
   useEffect(() => {
@@ -108,27 +115,16 @@ export default function Chat() {
     }
   };
 
-  // handleBotMessage = (message) => {
-  //   setMessages((prevMessages) => [
-  //     ...prevMessages,
-  //     {
-  //       id: nanoid(),
-  //       role: "assistant",
-  //       content: message,
-  //     },
-  //   ]);
-  // };
-
   const handleSubmitWithUserData = async (e) => {
     e.preventDefault();
 
     const email = localStorage.getItem("userEmail");
     const userId = localStorage.getItem("userId");
 
-    if (!email || !userId) {
-      alert("❌ User email or ID not found. Please log in.");
-      return;
-    }
+    // if (!email || !userId) {
+    //   alert("❌ User email or ID not found. Please log in.");
+    //   return;
+    // }
 
     console.log("🔄 Sending user message with:", { email, userId, input });
 
@@ -271,9 +267,26 @@ export default function Chat() {
 
   // Функция для демонстрации кнопок до начала диалога
   const handleDirectToolAction = async (toolName, params) => {
+    // Особый случай — просто выводим пояснение
+    if (toolName === "createYieldWallet") {
+      const message = `🔐 **To create your AI agent's personal crypto wallet**, you need to **sign in with your Google account** (in mobile version use menu button эмодзи 👉 ☰ ). Your wallet will then appear in the left menu.
+  💰 **After funding it**, you'll gain access to earning features: you can send your assets to DeFi protocols on the Aptos blockchain.  
+  📥 **If you prefer**, you can also import the wallet’s seed phrase into a crypto wallet like Petra and use it independently. The seed phrase is known only to you — it is generated from your Google account data.
+  _Click ⚡to view available Quick actions, or type a command in the input field._`;
+  
+      // добавим это как assistant-сообщение напрямую
+      setMessages((prev) => [
+        ...prev,
+        { id: nanoid(), role: "assistant", content: message },
+      ]);
+  
+      return;
+    }
+  
+  
+    // Все остальные Quick Actions идут через обычный append
     let input = toolName;
   
-    // Допиши параметры в строку (если есть)
     if (params && Object.keys(params).length > 0) {
       const paramStr = Object.entries(params)
         .map(([key, value]) => `${key}=${value}`)
@@ -287,9 +300,10 @@ export default function Chat() {
         content: input,
       });
     } catch (error) {
-      console.error("❌ Error sending quick action via append:", error);
+      console.error("❌ Error sending quick action:", error);
     }
   };
+  
   
   
   
@@ -311,24 +325,7 @@ export default function Chat() {
         <Card className="w-full max-w-3xl shadow-lg bg-white dark:bg-gray-800 flex flex-col h-[calc(100vh-5rem)]">
           <CardContent className="p-6 flex flex-col flex-grow overflow-hidden">
             <div className="flex-1 overflow-y-auto space-y-4 p-4">
-              {/* Новые кнопки до старта диалога */}
-              {messages.length === 0 && (
-                <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 mb-4">
-                  <h3 className="text-lg font-medium mb-3">Quick Actions</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                   {filteredActions.map((action, index) => (
-                   <button
-                  key={index}
-                  className="bg-white dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-left p-3 rounded-lg shadow-sm transition-colors"
-                  onClick={() => handleDirectToolAction(action.tool, action.params)}
-                   >
-                  {action.label}
-                </button>
-              ))}
-               </div>
-                </div>
-              )}
-
+             
               {/* Если лендинг успешен, отображаем форму BestLendStrategy */}
               {lendSuccess && (
                 <BestLendStrategy
@@ -442,10 +439,37 @@ export default function Chat() {
               </div>
             ) : null}
 
+ {/* Новые кнопки до старта диалога */}
+ {showQuickActions && (
+                <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 mb-4">
+                  <h3 className="text-lg font-medium mb-3">Quick Actions</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                   {filteredActions.map((action, index) => (
+                   <button
+                  key={index}
+                  className="bg-white dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-left p-3 rounded-lg shadow-sm transition-colors"
+                  onClick={() => handleDirectToolAction(action.tool, action.params)}
+                   >
+                  {action.label}
+                </button>
+              ))}
+               </div>
+                </div>
+              )}
+
             <form onSubmit={handleSubmitWithUserData} className="flex gap-2 p-4 border-t">
               <Input className="flex-1 p-2 border rounded-lg" value={input} placeholder="Type a message" onChange={handleInputChange} disabled={status === "submitted" || status === "streaming"} />
               <Button type="submit" className="bg-black text-white" disabled={status === "submitted" || status === "streaming"}>
                 <Send className="h-4 w-4" /> {/* Иконка Send */}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setShowQuickActions(!showQuickActions)}
+                title="Show Quick Actions"
+                className="p-2"
+              >
+                <Zap className="h-4 w-4" />
               </Button>
             </form>
           </CardContent>

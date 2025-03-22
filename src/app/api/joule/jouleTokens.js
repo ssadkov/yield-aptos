@@ -29,7 +29,6 @@ const JOULE_TOKENS = [
     token: "0xfaf4e633ae9eb31366c9ca24214231760926576c7b625313b3688b5e900731f6::staking::StakedThalaAPT",
     decimals: 100000000,
     isFungible: false,
-    icon: "https://raw.githubusercontent.com/PanoraExchange/Aptos-Tokens/main/logos/ThalaAPT.svg"
   },
   {
     assetName: "APT",
