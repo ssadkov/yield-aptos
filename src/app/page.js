@@ -18,6 +18,7 @@ import SwapForm from "@/components/SwapForm"; // Подключаем компо
 import BalancesTable from "@/components/WalletTable"; // Подключаем компонент BalancesTable
 import WithdrawForm from "@/components/WithdrawForm"; // Подключаем компонент WithdrawForm
 import remarkGfm from "remark-gfm";
+import TransferForm from "@/components/TransferForm"; // Подключаем компонент TransferForm
 
 // Отключаем SSR для react-markdown
 const ReactMarkdown = dynamic(() => import("react-markdown"), { ssr: false });
@@ -430,6 +431,13 @@ export default function Chat() {
                             token={tool.result.token}
                             amount={tool.result.amount}
                             setMessages={setMessages}
+                          />
+                        ) : tool.toolName === "transferAsset" && tool.result ? (
+                          <TransferForm
+                            token={tool.result.token}
+                            amount={tool.result.amount}
+                            toAddress={tool.result.toAddress}
+                            setMessages={setMessages}                          
                           />
                         ) : tool.result?.message ? (
                           <div className="prose prose-sm dark:prose-invert leading-relaxed">

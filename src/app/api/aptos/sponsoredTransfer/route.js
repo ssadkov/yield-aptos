@@ -110,25 +110,25 @@ export async function POST(req) {
                 hasCoinStore = false;
             }
 
-            if (!hasCoinStore) {
-                const registerTxn = await aptos.transaction.build.simple({
-                    sender: senderAccount.accountAddress,
-                    data: {
-                        function: "0x1::managed_coin::register",
-                        typeArguments: [tokenInfo.token],
-                        functionArguments: []
-                    }
-                });
+            // if (!hasCoinStore) {
+            //     const registerTxn = await aptos.transaction.build.simple({
+            //         sender: senderAccount.accountAddress,
+            //         data: {
+            //             function: "0x1::managed_coin::register",
+            //             typeArguments: [tokenInfo.token],
+            //             functionArguments: []
+            //         }
+            //     });
 
-                console.log("🔹 Registering CoinStore...");
-                const registerTxHash = await aptos.signAndSubmitTransaction({
-                    signer: senderAccount,
-                    transaction: registerTxn
-                });
+            //     console.log("🔹 Registering CoinStore...");
+            //     const registerTxHash = await aptos.signAndSubmitTransaction({
+            //         signer: senderAccount,
+            //         transaction: registerTxn
+            //     });
 
-                console.log(`✅ CoinStore registered! Tx: ${registerTxHash.hash}`);
-                await aptos.waitForTransaction({ transactionHash: registerTxHash.hash });
-            }
+            //     console.log(`✅ CoinStore registered! Tx: ${registerTxHash.hash}`);
+            //     await aptos.waitForTransaction({ transactionHash: registerTxHash.hash });
+            // }
         }
 
         // ✅ Формируем данные для транзакции
