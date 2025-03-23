@@ -1,20 +1,32 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { generateMnemonicForUser } from "@/utils/mnemonic";
+import { nanoid } from "nanoid"; // добавляем для генерации ID сообщений
 
 const formatAmount = (amount) => {
   return Number(amount).toFixed(8).replace(/\.0+$/, "");
 };
 
-export default function WithdrawForm({ protocol, token, amount, handleBotMessage }) {
+export default function WithdrawForm({ protocol, token, amount, setMessages }) {
   const [isWithdrawing, setIsWithdrawing] = useState(false);
+
+  const addBotMessage = (message) => {
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: nanoid(),
+        role: "assistant",
+        content: message,
+      },
+    ]);
+  };
 
   const handleWithdraw = async () => {
     setIsWithdrawing(true);
     console.log("🔹 Starting withdrawal process...");
-    
+
     try {
-      handleBotMessage(`🔹 Initiating WITHDRAW: ${amount} ${token}`);
+      addBotMessage(`🔹 Initiating WITHDRAW: ${amount} ${token}`);
       console.log("📩 Fetching user credentials...");
 
       const email = localStorage.getItem("userEmail");
@@ -37,9 +49,9 @@ export default function WithdrawForm({ protocol, token, amount, handleBotMessage
       if (!walletData.privateKeyHex) {
         throw new Error("❌ Failed to retrieve private key.");
       }
-      
+
       const privateKeyHex = walletData.privateKeyHex;
-      console.log("🔐 Private key retrieved successfully.: ", privateKeyHex);
+      console.log("🔐 Private key retrieved successfully:", privateKeyHex);
 
       if (protocol === "Joule") {
         console.log("🚀 Sending withdrawal request to Joule...");
@@ -50,15 +62,15 @@ export default function WithdrawForm({ protocol, token, amount, handleBotMessage
             privateKeyHex,
             token,
             amount,
-            positionId: "1"
+            positionId: "1",
           }),
         });
 
         const data = await response.json();
-        
+
         if (data.transactionHash) {
           console.log("Withdrawal Transaction Hash:", data.transactionHash);
-          handleBotMessage(`Withdraw Tx: ${data.transactionHash}`);
+          addBotMessage(`✅ Withdraw Tx: ${data.transactionHash}`);
         } else {
           throw new Error(data.error || "Unknown error");
         }
@@ -71,15 +83,15 @@ export default function WithdrawForm({ protocol, token, amount, handleBotMessage
             privateKeyHex,
             token,
             amount,
-            useSponsor: true
+            useSponsor: true,
           }),
         });
 
         const data = await response.json();
-        
+
         if (data.transactionHash) {
           console.log("Withdrawal Transaction Hash:", data.transactionHash);
-          handleBotMessage(`Withdraw Tx: ${data.transactionHash}`);
+          addBotMessage(`✅ Withdraw Tx: ${data.transactionHash}`);
         } else {
           throw new Error(data.error || "Unknown error");
         }
@@ -88,7 +100,7 @@ export default function WithdrawForm({ protocol, token, amount, handleBotMessage
       }
     } catch (error) {
       console.error("❌ Withdraw failed:", error);
-      handleBotMessage(`❌ Withdraw failed: ${error.message}`);
+      addBotMessage(`❌ Withdraw failed: ${error.message}`);
     } finally {
       console.log("🔄 Resetting withdrawal state...");
       setIsWithdrawing(false);

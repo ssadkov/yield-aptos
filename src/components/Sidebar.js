@@ -389,7 +389,7 @@ export default function Sidebar() {
                             {pos.token} {pos.provider && <span className="text-xs text-gray-500">({pos.provider})</span>}
                           </span>
                           <span className="font-bold text-right flex-1">{pos.amount}</span>
-                          <button
+                          {/* <button
                             onClick={() => handleBestLendStrategy(pos)}
                             className={`ml-2 text-gray-500 hover:text-yellow-500 text-sm ${
                               loadingStrategy[pos.token] ? "opacity-50 cursor-not-allowed" : ""
@@ -406,7 +406,7 @@ export default function Sidebar() {
                             disabled={loadingStrategy[pos.token]}
                           >
                             {loadingStrategy[pos.token] ? "🔄" : "➡️"}
-                          </button>
+                          </button> */}
                         </li>
                       ))}
                   </ul>
@@ -425,7 +425,7 @@ export default function Sidebar() {
                             {pos.token} {pos.provider && <span className="text-xs text-gray-500">({pos.provider})</span>}
                           </span>
                           <span className="font-bold text-right flex-1">{pos.amount}</span>
-                          <button
+                          {/* <button
                             onClick={() => handleBestLendStrategy(pos)}
                             className={`ml-2 text-gray-500 hover:text-yellow-500 text-sm ${
                               loadingStrategy[pos.token] ? "opacity-50 cursor-not-allowed" : ""
@@ -442,7 +442,7 @@ export default function Sidebar() {
                             disabled={loadingStrategy[pos.token]}
                           >
                             {loadingStrategy[pos.token] ? "🔄" : "➡️"}
-                          </button>
+                          </button> */}
                         </li>
                       ))}
                   </ul>

@@ -22,6 +22,8 @@ import remarkGfm from "remark-gfm";
 // Отключаем SSR для react-markdown
 const ReactMarkdown = dynamic(() => import("react-markdown"), { ssr: false });
 
+const toolsRequiringAddress = ["topUpWallet", "walletPositions"];
+
 const presetActions = [
   {
     label: "How can I top up my wallet?",
@@ -36,15 +38,15 @@ const presetActions = [
   },{
     label: "Show Top USD Pools",
     tool: "getPools",
-    params: { asset: "USD" }, // <-- вот здесь
+    params: { asset: "USD", }, // <-- вот здесь
     conditions: {},
   },
-  // {
-  //   label: "Create new Aptos wallet",
-  //   tool: "createAptosWallet",
-  //   params: {},
-  //   conditions: { loggedIn: false, hasPositions: true, hasFunds: true }, // Доступно только если пользователь НЕ залогинен
-  // },
+  {
+    label: "Show my wallet balance and positions",
+    tool: "walletPositions",
+    params: {},
+    conditions: { loggedIn: true }, // Доступно только если пользователь НЕ залогинен
+  },
 
   {
     label: "Optimize My Lending Strategy",
@@ -60,9 +62,20 @@ export default function Chat() {
     maxSteps: 5,
   });
 
-  // const { session } = useSessionData();
-  const { session, handleBotMessage } = useSessionData(); // ✅ Добавили handleBotMessage 
+  const { session } = useSessionData();
 
+
+  const addBotMessage = (message) => {
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: nanoid(),
+        role: "assistant",
+        content: message,
+      },
+    ]);
+  };
+  
 
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
@@ -169,7 +182,7 @@ export default function Chat() {
     }
 
     setIsLending(true);
-    handleBotMessage(`⏳ Processing lend transaction on ${protocol}...`);
+    addBotMessage(`⏳ Processing lend transaction on ${protocol}...`);
 
     const mnemonic = generateMnemonicForUser(email, userId);
     console.log("🔑 Generated mnemonic:", mnemonic);
@@ -184,7 +197,7 @@ export default function Chat() {
       const walletData = await walletResponse.json();
 
       if (!walletData.privateKeyHex) {
-        handleBotMessage("❌ Failed to retrieve private key.");
+        addBotMessage("❌ Failed to retrieve private key.");
         setIsLending(false);
         return;
       }
@@ -201,7 +214,7 @@ export default function Chat() {
           : null;
 
       if (!apiEndpoint) {
-        handleBotMessage(`❌ Unsupported protocol: ${protocol}`);
+        addBotMessage(`❌ Unsupported protocol: ${protocol}`);
         setIsLending(false);
         return;
       }
@@ -228,7 +241,7 @@ export default function Chat() {
 
       if (lendData.transactionHash) {
         const explorerLink = `https://explorer.aptoslabs.com/txn/${lendData.transactionHash}?network=mainnet`;
-        handleBotMessage(`✅ Lend transaction successful on ${protocol}!\n🔗 [View on Explorer](${explorerLink})`);
+        addBotMessage(`✅ Lend transaction successful on ${protocol}!\n🔗 [View on Explorer](${explorerLink})`);
 
               // Заполняем данные для BestLendStrategy
         setLendProtocol(protocol);
@@ -239,11 +252,11 @@ export default function Chat() {
         setLendSuccess(true); // Активируем отображение BestLendStrategy
 
       } else {
-        handleBotMessage(`❌ Lend transaction failed on ${protocol}.`);
+        addBotMessage(`❌ Lend transaction failed on ${protocol}.`);
       }
     } catch (error) {
       console.error(`❌ Error executing lend transaction on ${protocol}:`, error);
-      handleBotMessage(`❌ Error executing lend transaction on ${protocol}.`);
+      addBotMessage(`❌ Error executing lend transaction on ${protocol}.`);
     } finally {
       setIsLending(false);
     }
@@ -382,14 +395,13 @@ export default function Chat() {
                             swapToken={tool.result.fromToken}
                             amount={tool.result.amount}
                             onSwap={handleSwapAndLendClick} // Используем handleSwapAndLendClick
-                            handleBotMessage={handleBotMessage} // Передаем функцию
+                            setMessages={setMessages}
                           />
                         ) : tool.toolName === "getPools" && tool.result?.table ? (
                           <PoolsTable
                             pools={tool.result.table}
                             balances={balances}
                             onSupplyClick={handleSupplyClick}
-                            onBotMessage={handleBotMessage}
                             setMessages={setMessages}
                             handleInputChange={handleInputChange}
                             append={append} // ✅ передаём
@@ -417,7 +429,7 @@ export default function Chat() {
                             protocol={tool.result.protocol}
                             token={tool.result.token}
                             amount={tool.result.amount}
-                            handleBotMessage={handleBotMessage} // Передаем функцию
+                            setMessages={setMessages}
                           />
                         ) : tool.result?.message ? (
                           <div className="prose prose-sm dark:prose-invert leading-relaxed">
@@ -451,9 +463,9 @@ export default function Chat() {
               <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 mb-4">
                 <h3 className="text-lg font-medium mb-3">Quick Actions</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {filteredActions.map((action, index) => {
-                    const isTopUpWallet = action.tool === "topUpWallet";
-                    const dynamicParams = isTopUpWallet
+                {filteredActions.map((action, index) => {
+                    const requiresAddress = toolsRequiringAddress.includes(action.tool);
+                    const dynamicParams = requiresAddress
                       ? { ...action.params, address: userAddress }
                       : action.params;
 
@@ -462,12 +474,13 @@ export default function Chat() {
                         key={index}
                         className="bg-white dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-left p-3 rounded-lg shadow-sm transition-colors"
                         onClick={() => handleDirectToolAction(action.tool, dynamicParams)}
-                        disabled={isTopUpWallet && !userAddress}
+                        disabled={requiresAddress && !userAddress}
                       >
                         {action.label}
                       </button>
                     );
                   })}
+
                 </div>
               </div>
             )}
