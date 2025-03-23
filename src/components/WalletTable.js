@@ -6,7 +6,7 @@ import JOULE_TOKENS from "@/app/api/joule/jouleTokens";
 import PROTOCOL_ICONS from "@/app/api/aptos/markets/protocolIcons";
 import { nanoid } from "nanoid";
 
-export default function WalletTable({ balances, positions, onTransferClick, onBestLendClick, setMessages, handleInputChange }) {
+export default function WalletTable({ balances, positions, setMessages, handleInputChange }) {
   const [isAIAgentWallet, setIsAIAgentWallet] = useState(false);
 
   useEffect(() => {
@@ -34,6 +34,30 @@ export default function WalletTable({ balances, positions, onTransferClick, onBe
         role: "assistant",
         type: "form",
         content: `${withdrawMessage}\n💰 Enter amount (default: all)`,
+        position,
+      },
+    ]);
+
+    // Устанавливаем в поле ввода всю сумму по умолчанию
+    handleInputChange({
+      target: { value: `${position.balance}` },
+    });
+  };
+
+
+  const onTransferClick = async (position) => {
+    console.log("🔴 Withdraw initiated for:", position);
+
+    const withdrawMessage = `Transfer **${position.asset}** (token: ${position.token}) "}`;
+    
+    // Отправляем в чат
+    setMessages((prevMessages) => [
+      ...prevMessages,
+      {
+        id: nanoid(),
+        role: "assistant",
+        type: "form",
+        content: `${withdrawMessage}\n💰 Enter amount (default: all) and destination wallet (Aptos)`,
         position,
       },
     ]);
@@ -75,9 +99,9 @@ export default function WalletTable({ balances, positions, onTransferClick, onBe
                     <Button className="bg-blue-500 text-white px-4 py-1 rounded" onClick={() => onTransferClick(row)}>
                       Transfer
                     </Button>
-                    <Button className="bg-yellow-500 text-white px-4 py-1 rounded" onClick={() => onBestLendClick(row)}>
+                    {/* <Button className="bg-yellow-500 text-white px-4 py-1 rounded" onClick={() => onBestLendClick(row)}>
                       Best Lend
-                    </Button>
+                    </Button> */}
                   </td>
                 )}
               </tr>
