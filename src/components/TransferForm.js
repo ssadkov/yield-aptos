@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { generateMnemonicForUser } from "@/utils/mnemonic";
 import { nanoid } from "nanoid";
 
-export default function WithdrawForm({ token, amount, toAddress, setMessages }) {
+export default function TransferForm({ token, amount, toAddress, setMessages }) {
   const [isProcessing, setIsProcessing] = useState(false);
 
   const addBotMessage = (content) => {
@@ -13,7 +13,7 @@ export default function WithdrawForm({ token, amount, toAddress, setMessages }) 
     ]);
   };
 
-  const handleWithdraw = async () => {
+  const handleTransfer = async () => {
     setIsProcessing(true);
     try {
       addBotMessage(`🔄 Preparing transfer of **${amount}** of token:\n\`${token}\`\nto address:\n\`${toAddress}\``);
@@ -82,11 +82,11 @@ export default function WithdrawForm({ token, amount, toAddress, setMessages }) 
         <strong>Amount:</strong> {amount}
       </p>
       <Button
-        onClick={handleWithdraw}
+        onClick={handleTransfer}
         disabled={isProcessing}
         className="bg-red-500 text-white px-4 py-2 rounded disabled:opacity-50"
       >
-        {isProcessing ? "⏳ Processing..." : "Withdraw"}
+        {isProcessing ? "⏳ Processing..." : "Transfer"}
       </Button>
     </div>
   );
