@@ -284,7 +284,7 @@ export default function Chat() {
   const handleDirectToolAction = async (toolName, params) => {
     // Особый случай — просто выводим пояснение
     if (toolName === "createYieldWallet") {
-      const message = `🔐 **To create your AI agent's personal crypto wallet**, you need to **sign in with your Google account** (in mobile version use menu button эмодзи 👉 ☰ ). Your wallet will then appear in the left menu.
+      const message = `🔐 **To create your AI agent's personal crypto wallet**, you need to **sign in with your Google account** (in mobile version use menu button ☰ 👈 ). Your wallet will then appear in the left menu.
   💰 **After funding it**, you'll gain access to earning features: you can send your assets to DeFi protocols on the Aptos blockchain.  
   📥 **If you prefer**, you can also import the wallet’s seed phrase into a crypto wallet like Petra and use it independently. The seed phrase is known only to you — it is generated from your Google account data.
   _Click ⚡to view available Quick actions, or type a command in the input field._`;
