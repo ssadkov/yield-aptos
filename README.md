@@ -30,7 +30,7 @@ Aptos’ fast and low-cost transactions further enhance the efficiency of the pr
 
 ## Our Team
 
-<img src="https://sheremetev.aoserver.ru/storage/8ae7c3e09485cbe7701b2aa305ba9078/Marketing/FinKeeper/Our-team.png" width="500" alt="Our Team"/>
+<img src="https://sheremetev.aoserver.ru/storage/8ae7c3e09485cbe7701b2aa305ba9078/Marketing/FinKeeper/Our-team.png?1742809829000" width="500" alt="Our Team"/>
 
 ## <img src="https://img.icons8.com/color/48/000000/link.png" width="25" alt="Link"/> Link
 
