@@ -47,6 +47,11 @@ Integration example: [FinKeeper](https://finkeeper.pro/app)
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
 
+## 🛠 Environment Variables
+IMPORTANT!
+
+Before running the app locally, create a `.env.local` file in the root directory (see example in repo).
+
 ## Getting Started
 
 First, run the development server:
