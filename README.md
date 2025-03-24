@@ -38,7 +38,7 @@ Aptos’ fast and low-cost transactions further enhance the efficiency of the pr
 
 [Yield AI swagger API](https://yield-a.vercel.app/swagger)
 
-Integration example: [FinKeeper](https://finkeeper.pro/app)
+Integration example: [FinKeeper](https://finkeeper.pro/app) [source](https://github.com/finkeeper/finkeeper/blob/main/www/frontend/modules/app/components/APTApi.php#L10)
 
 
 ---
