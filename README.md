@@ -35,9 +35,10 @@ Aptos’ fast and low-cost transactions further enhance the efficiency of the pr
 ## <img src="https://img.icons8.com/color/48/000000/link.png" width="25" alt="Link"/> Link
 
 [Yield AI](https://yield-a.vercel.app/)
+
 [Yield AI swagger API](https://yield-a.vercel.app/swagger)
 
-Integration example: [FinKeeper](https://finkeeper.pro/app) [source]()
+Integration example: [FinKeeper](https://finkeeper.pro/app)
 
 
 ---
