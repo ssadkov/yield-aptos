@@ -11,9 +11,14 @@
       "description": "Endpoints related to Aptos blockchain operations"
     },
     {
+      "name": "aries",
+      "description": "Endpoints related to Aries protocol"
+    },
+    {
       "name": "joule",
       "description": "Endpoints related to Joule protocol"
     },
+
     {
       "name": "echelon",
       "description": "Endpoints related to Echelon protocol"
@@ -547,6 +552,66 @@
         }
       }
     },
+
+    "/api/aries/userPositions": {
+      "get": {
+        "tags": ["aries"],
+        "summary": "Fetch Aries user profile",
+        "description": "Returns Aries profile data for the provided Aptos wallet address.",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Aptos wallet address"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Profile fetched successfully",
+            "content": {
+              "application/json": {
+                "example": {
+                  "profiles": {
+                    "total_equity": 1.9998999042596768,
+                    "profiles": {
+                      "profileMain Account": {
+                        "id": "67e68cfcdabe51a1a34e66fe",
+                        "profileAddress": "0xf91d9ceda27304cac24364da7f3b54705b5c4f5bae5451563ebac853ad2c4151",
+                        "profileName": "profileMain Account",
+                        "equity": 1.9998999042596768,
+                        "collateralValue": 1.9998999042596768,
+                        "loanValue": 0,
+                        "riskFactor": 0,
+                        "deposits": {
+                          "0x9770fa9c725cbd97eb50b2be5f7416efdfd1f1554beb0750d4dae4c64e860da3::wrapped_coins::WrappedUSDC": {
+                            "collateral_amount": 1979509,
+                            "collateral_coins": 2000007.8646842125,
+                            "collateral_value": 1.9998999042596768
+                          }
+                        },
+                        "borrows": {}
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing address parameter"
+          },
+          "500": {
+            "description": "Failed to fetch Aries profile"
+          }
+        }
+      }
+    },
+
+
     "/api/echelon/lend": {
       "post": {
         "tags": ["echelon"],
