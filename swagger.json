@@ -159,7 +159,7 @@
           {
             "name": "protocol",
             "in": "query",
-            "description": "Filter results by protocol (e.g., 'Joule', 'Echelon')",
+            "description": "Filter results by protocol (e.g., 'Joule', 'Echelon', 'Aries')",
             "required": false,
             "schema": {
               "type": "string"

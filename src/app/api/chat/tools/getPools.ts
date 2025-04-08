@@ -9,7 +9,7 @@ const getPools = tool({
       "The asset name (e.g., USD, APT, BTC, ETH) to fetch yield pools for"
     ),
     protocol: z.string().optional().describe(
-      "Optional protocol filter (e.g., 'Joule', 'Echelon')"
+      "Optional protocol filter (e.g., 'Joule', 'Echelon', 'Aries')"
     ),
   }),
   execute: async ({ asset, protocol }) => {
