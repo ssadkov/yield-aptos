@@ -8,27 +8,19 @@ export async function GET(req) {
     const protocol = searchParams.get("protocol");
 
     let combinedPools = [];
-    let protocolStatus = { Joule: 0, Echelon: 0 }; // Отслеживаем, какие API отработали
+    let protocolStatus = { Joule: 0, Echelon: 0, Aries: 0 };
 
-    // 🟢 Запрос к Joule API
+    // 🟢 Joule API
     try {
-      const jouleResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/joule/pools`, {
-        method: "GET",
-        headers: { Accept: "application/json" },
-      });
-
+      const jouleResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/joule/pools`);
       if (jouleResponse.ok) {
         let joulePools = await jouleResponse.json();
-
         if (Array.isArray(joulePools)) {
-          protocolStatus.Joule = 1; // Joule API отработал
+          protocolStatus.Joule = 1;
           joulePools = joulePools.map((pool) => ({
             asset: pool.asset.assetName,
             provider: pool.asset.provider,
-            totalAPY:
-              parseFloat(pool.depositApy) +
-              parseFloat(pool.extraAPY.depositAPY) +
-              parseFloat(pool.extraAPY.stakingAPY),
+            totalAPY: parseFloat(pool.depositApy) + parseFloat(pool.extraAPY.depositAPY) + parseFloat(pool.extraAPY.stakingAPY),
             depositApy: parseFloat(pool.depositApy),
             extraAPY: parseFloat(pool.extraAPY.depositAPY),
             borrowAPY: parseFloat(pool.borrowApy),
@@ -38,39 +30,28 @@ export async function GET(req) {
             protocol: "Joule",
           }));
           combinedPools.push(...joulePools);
-        } else {
-          console.error("⚠️ Joule API вернул некорректный формат данных.");
         }
-      } else {
-        console.error(`⚠️ Joule API не отвечает: ${jouleResponse.statusText}`);
       }
     } catch (error) {
-      console.error("❌ Ошибка запроса к Joule API:", error.message);
+      console.error("❌ Joule API error:", error.message);
     }
 
-    // 🔵 Запрос к Echelon API
+    // 🔵 Echelon API
     try {
-      const echelonResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/echelon/markets`, {
-        method: "GET",
-        headers: { Accept: "application/json" },
-      });
-
+      const echelonResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/echelon/markets`);
       if (echelonResponse.ok) {
         let echelonData = await echelonResponse.json();
-
         if (echelonData.success && Array.isArray(echelonData.marketData)) {
-          protocolStatus.Echelon = 1; // Echelon API отработал
-          let echelonPools = echelonData.marketData.map((market) => {
-            // Найдем токен в JOULE_TOKENS
+          protocolStatus.Echelon = 1;
+          const echelonPools = echelonData.marketData.map((market) => {
             const tokenData = JOULE_TOKENS.find((t) => t.token === market.coin);
-
             return {
               asset: tokenData ? tokenData.assetName : market.coin,
               provider: tokenData ? tokenData.provider : "Unknown",
-              totalAPY: (parseFloat(market.supplyAPR) * 100) || 0, // Приводим к процентам
-              depositApy: (parseFloat(market.supplyAPR) * 100) || 0, // Приводим к процентам
+              totalAPY: (parseFloat(market.supplyAPR) * 100) || 0,
+              depositApy: (parseFloat(market.supplyAPR) * 100) || 0,
               extraAPY: 0,
-              borrowAPY: (parseFloat(market.borrowAPR) * 100) || 0, // Приводим к процентам
+              borrowAPY: (parseFloat(market.borrowAPR) * 100) || 0,
               extraBorrowAPY: 0,
               extraStakingAPY: 0,
               token: market.coin || "Unknown",
@@ -78,22 +59,42 @@ export async function GET(req) {
             };
           });
           combinedPools.push(...echelonPools);
-        } else {
-          console.error("⚠️ Echelon API вернул некорректный формат данных.");
         }
-      } else {
-        console.error(`⚠️ Echelon API не отвечает: ${echelonResponse.statusText}`);
       }
     } catch (error) {
-      console.error("❌ Ошибка запроса к Echelon API:", error.message);
+      console.error("❌ Echelon API error:", error.message);
     }
 
-    // ❗ Если оба API недоступны, возвращаем ошибку
+    // 🟣 Aries API
+    try {
+      const ariesResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/aries/markets`);
+      if (ariesResponse.ok) {
+        const ariesData = await ariesResponse.json();
+        if (ariesData.success && Array.isArray(ariesData.marketData)) {
+          protocolStatus.Aries = 1;
+          const ariesPools = ariesData.marketData.map((item) => ({
+            asset: item.coinAddress.split("::")[2] || item.coinAddress,
+            provider: "Aries",
+            totalAPY: (parseFloat(item.depositAPR) * 100) || 0,
+            depositApy: (parseFloat(item.depositAPR) * 100) || 0,
+            extraAPY: 0,
+            borrowAPY: (parseFloat(item.borrowAPR) * 100) || 0,
+            extraBorrowAPY: 0,
+            extraStakingAPY: 0,
+            token: item.coinAddress,
+            protocol: "Aries",
+          }));
+          combinedPools.push(...ariesPools);
+        }
+      }
+    } catch (error) {
+      console.error("❌ Aries API error:", error.message);
+    }
+
     if (combinedPools.length === 0) {
       return NextResponse.json({ error: "Все API недоступны", protocols: protocolStatus }, { status: 500 });
     }
 
-    // 🏷️ Фильтрация по assetName, если параметр передан
     if (assetName) {
       combinedPools = combinedPools.filter((pool) =>
         pool.asset.toUpperCase().includes(assetName.toUpperCase()) ||
@@ -101,17 +102,14 @@ export async function GET(req) {
       );
     }
 
-    // 🔍 Фильтрация по protocol, если параметр передан
     if (protocol) {
       combinedPools = combinedPools.filter((pool) => pool.protocol.toUpperCase() === protocol.toUpperCase());
     }
 
-    // Возвращаем объект с `protocols` и `data`
     return NextResponse.json({
-      protocols: protocolStatus, // Блок со статусом API
-      data: combinedPools,       // Таблица с рынками
+      protocols: protocolStatus,
+      data: combinedPools,
     });
-
   } catch (error) {
     return NextResponse.json({ error: "Ошибка обработки запроса: " + error.message }, { status: 500 });
   }
