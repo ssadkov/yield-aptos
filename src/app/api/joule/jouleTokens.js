@@ -16,6 +16,22 @@ const JOULE_TOKENS = [
     icon: "https://raw.githubusercontent.com/PanoraExchange/Aptos-Tokens/main/logos/USDC.svg"
   },
   {
+    assetName: "USDC",
+    provider: "Aries Wrapped USDC",
+    token: "0x9770fa9c725cbd97eb50b2be5f7416efdfd1f1554beb0750d4dae4c64e860da3::wrapped_coins::WrappedUSDC",
+    decimals: 1000000,
+    isFungible: false,
+    icon: "https://raw.githubusercontent.com/PanoraExchange/Aptos-Tokens/main/logos/USDC.svg"
+  },
+  {
+    assetName: "USDt",
+    provider: "Aries Wrapped Tether USD",
+    token: "0x9770fa9c725cbd97eb50b2be5f7416efdfd1f1554beb0750d4dae4c64e860da3::fa_to_coin_wrapper::WrappedUSDT",
+    decimals: 1000000,
+    isFungible: false,
+    icon: "https://raw.githubusercontent.com/PanoraExchange/Aptos-Tokens/main/logos/USDT.svg"
+  },
+  {
     assetName: "USDt",
     provider: "Tether USD",
     token: "0x357b0b74bc833e95a115ad22604854d6b0fca151cecd94111770e5d6ffc9dc2b",

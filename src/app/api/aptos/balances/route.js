@@ -72,6 +72,43 @@ export async function GET(req) {
       }
 
 
+            // Запрос позиций в Aries
+            try {
+              const ariesResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/aries/userPositions?address=${address}`);
+              if (ariesResponse.ok) {
+                const ariesData = await ariesResponse.json();
+                const profiles = ariesData.profiles?.profiles || {};
+      
+                for (const [profileName, profile] of Object.entries(profiles)) {
+                  const deposits = profile.deposits || {};
+                  for (const [tokenAddress, depositData] of Object.entries(deposits)) {
+                    const tokenInfo = JOULE_TOKENS.find(t => t.token === tokenAddress);
+                    const decimals = tokenInfo ? tokenInfo.decimals : 1;
+                    const amount = parseFloat(depositData.collateral_coins) / decimals;
+      
+                    if (amount > 0) {
+                      positions.push({
+                        protocol: "Aries",
+                        token: tokenAddress,
+                        amount: amount,
+                        market: "",
+                        supplyApr: "",
+                        position_id: profile.id,
+                        asset: tokenInfo ? tokenInfo.assetName : "Unknown",
+                        provider: tokenInfo ? tokenInfo.provider : "Unknown"
+                      });
+                    }
+                  }
+                }
+              } else {
+                console.warn("⚠️ Не удалось получить позиции в Aries");
+              }
+            } catch (error) {
+              console.error("❌ Ошибка при получении данных из Aries:", error);
+            }
+      
+
+
           // Запрос позиций в Joule
           try {
             const jouleResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/joule/userPositions?address=${address}`);
