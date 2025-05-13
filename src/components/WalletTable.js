@@ -10,10 +10,8 @@ export default function WalletTable({ balances, positions, setMessages, handleIn
   const [isAIAgentWallet, setIsAIAgentWallet] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const walletAddress = localStorage.getItem("aptosWalletAddress");
-      setIsAIAgentWallet(!!walletAddress); // Преобразуем в `true/false`
-    }
+    const walletAddress = localStorage.getItem("aptosWalletAddress");
+    setIsAIAgentWallet(!!walletAddress);
   }, []);
 
   const getTokenIcon = (asset) => {
@@ -69,96 +67,108 @@ export default function WalletTable({ balances, positions, setMessages, handleIn
   };
 
   return (
-    <div className="mt-2 overflow-x-auto w-full">
-      {/* Assets Table */}
-      <p className="text-green-600 dark:text-green-400 font-bold">✅ Assets</p>
-      <table className="w-full border-collapse border border-gray-400 dark:border-gray-600">
-        <thead>
-          <tr className="bg-gray-500 dark:bg-gray-700 text-white">
-            <th className="border border-gray-400 p-2">Asset</th>
-            <th className="border border-gray-400 p-2">Provider</th>
-            <th className="border border-gray-400 p-2">Balance</th>
-            {isAIAgentWallet && <th className="border border-gray-400 p-2">Actions</th>}
-          </tr>
-        </thead>
-        <tbody>
-          {balances.map((row, idx) => {
-            const tokenIcon = getTokenIcon(row.asset);
-            return (
-              <tr key={idx} className="bg-white dark:bg-gray-800">
-                <td className="border border-gray-400 p-2">
-                  <div className="flex items-center">
-                    {tokenIcon && <img src={tokenIcon} alt={row.asset} className="w-6 h-6 mr-2" />}
-                    <span>{row.asset}</span>
-                  </div>
-                </td>
-                <td className="border border-gray-400 p-2">{row.provider}</td>
-                <td className="border border-gray-400 p-2 font-bold">{parseFloat(row.balance).toFixed(4)}</td>
-                {isAIAgentWallet && (
-                  <td className="border border-gray-400 p-2 flex gap-2">
-                    <Button className="bg-blue-500 text-white px-4 py-1 rounded" onClick={() => onTransferClick(row)}>
-                      Transfer
-                    </Button>
-                    {/* <Button className="bg-yellow-500 text-white px-4 py-1 rounded" onClick={() => onBestLendClick(row)}>
-                      Best Lend
-                    </Button> */}
-                  </td>
-                )}
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-
-      {/* Positions Table */}
-      <p className="text-green-600 dark:text-green-400 font-bold mt-6">✅ Positions</p>
-      <table className="w-full border-collapse border border-gray-400 dark:border-gray-600">
-        <thead>
-          <tr className="bg-gray-500 dark:bg-gray-700 text-white">
-            <th className="border border-gray-400 p-2">Asset</th>
-            <th className="border border-gray-400 p-2">Provider</th>
-            <th className="border border-gray-400 p-2">Balance</th>
-            <th className="border border-gray-400 p-2">Protocol</th>
-            <th className="border border-gray-400 p-2">Supply APR</th>
-            {isAIAgentWallet && <th className="border border-gray-400 p-2">Action</th>}
-          </tr>
-        </thead>
-        <tbody>
-          {positions.map((row, idx) => {
-            const tokenIcon = getTokenIcon(row.asset);
-            const protocolIcon = PROTOCOL_ICONS[row.protocol];
-
-            return (
-              <tr key={balances.length + idx} className="bg-white dark:bg-gray-800">
-                <td className="border border-gray-400 p-2">
-                  <div className="flex items-center">
-                    {tokenIcon && <img src={tokenIcon} alt={row.asset} className="w-6 h-6 mr-2" />}
-                    <span>{row.asset}</span>
-                  </div>
-                </td>
-                <td className="border border-gray-400 p-2">{row.provider}</td>
-                <td className="border border-gray-400 p-2 font-bold">{parseFloat(row.balance).toFixed(4)}</td>
-                <td className="border border-gray-400 p-2">
-                  <div className="flex items-center">
-                    {protocolIcon && <img src={protocolIcon} alt={row.protocol} className="w-5 h-5 mr-2" />}
-                    <span>{row.protocol}</span>
-                  </div>
-                </td>
-                <td className="border border-gray-400 p-2 font-bold">
-                  {row.supplyApr ? `${parseFloat(row.supplyApr).toFixed(2)}%` : "-"}
-                </td>
-                {isAIAgentWallet && (
+    <div className="space-y-4" suppressHydrationWarning>
+      {isAIAgentWallet && (
+        <div className="bg-blue-50 dark:bg-blue-900 p-4 rounded-lg">
+          <h3 className="text-lg font-semibold text-blue-800 dark:text-blue-200">
+            AI Agent Wallet
+          </h3>
+          <p className="text-blue-600 dark:text-blue-300">
+            This is your AI agent's personal wallet. You can use it to interact with DeFi protocols.
+          </p>
+        </div>
+      )}
+      <div className="mt-2 overflow-x-auto w-full">
+        {/* Assets Table */}
+        <p className="text-green-600 dark:text-green-400 font-bold">✅ Assets</p>
+        <table className="w-full border-collapse border border-gray-400 dark:border-gray-600">
+          <thead>
+            <tr className="bg-gray-500 dark:bg-gray-700 text-white">
+              <th className="border border-gray-400 p-2">Asset</th>
+              <th className="border border-gray-400 p-2">Provider</th>
+              <th className="border border-gray-400 p-2">Balance</th>
+              {isAIAgentWallet && <th className="border border-gray-400 p-2">Actions</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {balances.map((row, idx) => {
+              const tokenIcon = getTokenIcon(row.asset);
+              return (
+                <tr key={idx} className="bg-white dark:bg-gray-800">
                   <td className="border border-gray-400 p-2">
-                    <Button className="bg-red-500 text-white px-4 py-1 rounded" onClick={() => handleWithdrawClick(row)}>
-                      Withdraw
-                    </Button>
+                    <div className="flex items-center">
+                      {tokenIcon && <img src={tokenIcon} alt={row.asset} className="w-6 h-6 mr-2" />}
+                      <span>{row.asset}</span>
+                    </div>
                   </td>
-                )}
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                  <td className="border border-gray-400 p-2">{row.provider}</td>
+                  <td className="border border-gray-400 p-2 font-bold">{parseFloat(row.balance).toFixed(4)}</td>
+                  {isAIAgentWallet && (
+                    <td className="border border-gray-400 p-2 flex gap-2">
+                      <Button className="bg-blue-500 text-white px-4 py-1 rounded" onClick={() => onTransferClick(row)}>
+                        Transfer
+                      </Button>
+                      {/* <Button className="bg-yellow-500 text-white px-4 py-1 rounded" onClick={() => onBestLendClick(row)}>
+                        Best Lend
+                      </Button> */}
+                    </td>
+                  )}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+
+        {/* Positions Table */}
+        <p className="text-green-600 dark:text-green-400 font-bold mt-6">✅ Positions</p>
+        <table className="w-full border-collapse border border-gray-400 dark:border-gray-600">
+          <thead>
+            <tr className="bg-gray-500 dark:bg-gray-700 text-white">
+              <th className="border border-gray-400 p-2">Asset</th>
+              <th className="border border-gray-400 p-2">Provider</th>
+              <th className="border border-gray-400 p-2">Balance</th>
+              <th className="border border-gray-400 p-2">Protocol</th>
+              <th className="border border-gray-400 p-2">Supply APR</th>
+              {isAIAgentWallet && <th className="border border-gray-400 p-2">Action</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {positions.map((row, idx) => {
+              const tokenIcon = getTokenIcon(row.asset);
+              const protocolIcon = PROTOCOL_ICONS[row.protocol];
+
+              return (
+                <tr key={balances.length + idx} className="bg-white dark:bg-gray-800">
+                  <td className="border border-gray-400 p-2">
+                    <div className="flex items-center">
+                      {tokenIcon && <img src={tokenIcon} alt={row.asset} className="w-6 h-6 mr-2" />}
+                      <span>{row.asset}</span>
+                    </div>
+                  </td>
+                  <td className="border border-gray-400 p-2">{row.provider}</td>
+                  <td className="border border-gray-400 p-2 font-bold">{parseFloat(row.balance).toFixed(4)}</td>
+                  <td className="border border-gray-400 p-2">
+                    <div className="flex items-center">
+                      {protocolIcon && <img src={protocolIcon} alt={row.protocol} className="w-5 h-5 mr-2" />}
+                      <span>{row.protocol}</span>
+                    </div>
+                  </td>
+                  <td className="border border-gray-400 p-2 font-bold">
+                    {row.supplyApr ? `${parseFloat(row.supplyApr).toFixed(2)}%` : "-"}
+                  </td>
+                  {isAIAgentWallet && (
+                    <td className="border border-gray-400 p-2">
+                      <Button className="bg-red-500 text-white px-4 py-1 rounded" onClick={() => handleWithdrawClick(row)}>
+                        Withdraw
+                      </Button>
+                    </td>
+                  )}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
