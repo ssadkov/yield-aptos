@@ -18,10 +18,13 @@
       "name": "joule",
       "description": "Endpoints related to Joule protocol"
     },
-
     {
       "name": "echelon",
       "description": "Endpoints related to Echelon protocol"
+    },
+    {
+      "name": "hyperion",
+      "description": "Endpoints related to Hyperion protocol"
     },
     {
       "name": "general",
@@ -1085,6 +1088,120 @@
               "application/json": {
                 "example": {
                   "error": "Failed to process withdraw"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hyperion/pools": {
+      "get": {
+        "tags": ["hyperion"],
+        "summary": "Get all Hyperion pools",
+        "description": "Returns all available pools from the Hyperion protocol with their APY and token information.",
+        "responses": {
+          "200": {
+            "description": "Successful response with pool data",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": true,
+                  "data": [
+                    {
+                      "asset": "APT",
+                      "provider": "Aptos",
+                      "totalAPY": 5.25,
+                      "depositApy": 5.25,
+                      "extraAPY": 0,
+                      "borrowAPY": 0,
+                      "extraBorrowAPY": 0,
+                      "extraStakingAPY": 0,
+                      "token": "0x1::aptos_coin::AptosCoin",
+                      "protocol": "Hyperion",
+                      "tvl": 1000000,
+                      "volume24h": 50000,
+                      "fee": 0.3,
+                      "token0": {
+                        "address": "0x1::aptos_coin::AptosCoin",
+                        "symbol": "APT",
+                        "name": "Aptos",
+                        "decimals": 8
+                      },
+                      "token1": {
+                        "address": "0x2::stable_coin::USDC",
+                        "symbol": "USDC",
+                        "name": "USD Coin",
+                        "decimals": 6
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": "Failed to fetch Hyperion pools",
+                  "details": "Error message details"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hyperion/userPositions": {
+      "get": {
+        "tags": ["hyperion"],
+        "summary": "Get user positions in Hyperion",
+        "description": "Returns all positions for a specific wallet address in the Hyperion protocol.",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "query",
+            "required": true,
+            "description": "User's wallet address",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response with user positions",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": true,
+                  "data": []
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing address parameter",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": "Address parameter is required"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": "Failed to fetch Hyperion user positions",
+                  "details": "Error message details"
                 }
               }
             }

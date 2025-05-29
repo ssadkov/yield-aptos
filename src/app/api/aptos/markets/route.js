@@ -8,7 +8,7 @@ export async function GET(req) {
     const protocol = searchParams.get("protocol");
 
     let combinedPools = [];
-    let protocolStatus = { Joule: 0, Echelon: 0, Aries: 0 };
+    let protocolStatus = { Joule: 0, Echelon: 0, Aries: 0, Hyperion: 0 };
 
     // 🟢 Joule API
     try {
@@ -89,6 +89,20 @@ export async function GET(req) {
       }
     } catch (error) {
       console.error("❌ Aries API error:", error.message);
+    }
+
+    // 🔶 Hyperion API
+    try {
+      const hyperionResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/hyperion/pools`);
+      if (hyperionResponse.ok) {
+        const hyperionData = await hyperionResponse.json();
+        if (hyperionData.success && Array.isArray(hyperionData.data)) {
+          protocolStatus.Hyperion = 1;
+          combinedPools.push(...hyperionData.data);
+        }
+      }
+    } catch (error) {
+      console.error("❌ Hyperion API error:", error.message);
     }
 
     if (combinedPools.length === 0) {
