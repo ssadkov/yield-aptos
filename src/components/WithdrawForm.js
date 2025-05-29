@@ -36,7 +36,7 @@ export default function WithdrawForm({ protocol, token, amount, setMessages }) {
       }
 
       console.log("🔑 Generating mnemonic...");
-      const mnemonic = generateMnemonicForUser(email, userId);
+      const mnemonic = await generateMnemonicForUser(email, userId);
 
       console.log("🔄 Restoring wallet from mnemonic...");
       const walletResponse = await fetch("/api/aptos/restoreWalletFromMnemonic", {

@@ -2,9 +2,6 @@ import { AgentRuntime, LocalSigner } from "move-agent-kit";
 import { Aptos, AptosConfig, Ed25519PrivateKey, Network, PrivateKey } from "@aptos-labs/ts-sdk";
 import SYSTEM_AGENT from "@/config"; // Загружаем системный ключ
 
-const aptosConfig = new AptosConfig({ network: Network.MAINNET });
-const aptos = new Aptos(aptosConfig);
-
 export async function GET(req) {
     try {
         // Получаем параметры запроса
@@ -21,6 +18,11 @@ export async function GET(req) {
         // console.log(`🔹 Fetching positions for user: ${userAddress}`);
 
         // ✅ Фикс обработки приватного ключа
+        const aptosConfig = new AptosConfig({ 
+            network: Network.MAINNET,
+            apiKey: process.env.NEXT_PUBLIC_APTOS_API_KEY 
+        });
+        const aptos = new Aptos(aptosConfig);
 		
 		const privateKey = new Ed25519PrivateKey(PrivateKey.formatPrivateKey(SYSTEM_AGENT.privateKeyHex, "ed25519"));
         const account = await aptos.deriveAccountFromPrivateKey({ privateKey });
@@ -48,4 +50,23 @@ export async function GET(req) {
             headers: { "Content-Type": "application/json" }
         });
     }
+}
+
+export async function POST(request) {
+  try {
+    const { privateKey } = await request.json();
+    const aptosConfig = new AptosConfig({ 
+      network: Network.MAINNET,
+      apiKey: process.env.NEXT_PUBLIC_APTOS_API_KEY 
+    });
+    const aptos = new Aptos(aptosConfig);
+
+    // ... existing code ...
+  } catch (error) {
+    console.error("❌ Error fetching user positions:", error);
+    return new Response(JSON.stringify({ error: "Failed to fetch user positions" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" }
+    });
+  }
 }

@@ -61,7 +61,7 @@ export default function SwapLendForm({ protocol, token, amount, swapToken, onSwa
         return;
       }
 
-      const mnemonic = generateMnemonicForUser(email, userId);
+      const mnemonic = await generateMnemonicForUser(email, userId);
 
       const walletResponse = await fetch("/api/aptos/restoreWalletFromMnemonic", {
         method: "POST",

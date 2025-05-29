@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased flex h-screen overflow-hidden`}>
         <SessionProvider>
           <ClientLayout>{children}</ClientLayout>

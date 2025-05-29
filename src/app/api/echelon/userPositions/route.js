@@ -5,22 +5,24 @@ import {
     Network,
 } from "@aptos-labs/ts-sdk";
 
-const aptosConfig = new AptosConfig({ network: Network.MAINNET });
-const aptos = new Aptos(aptosConfig);
-const echelonClient = new EchelonClient(aptos, "0xc6bc659f1649553c1a3fa05d9727433dc03843baac29473c817d06d39e7621ba"); // Адрес контракта Echelon
-
 export async function GET(req) {
-    const { searchParams } = new URL(req.url);
-    const address = searchParams.get("address");
-
-    if (!address) {
-        return new Response(JSON.stringify({ error: "Address is required" }), {
-            status: 400,
-            headers: { "Content-Type": "application/json" }
-        });
-    }
-
     try {
+        const { searchParams } = new URL(req.url);
+        const address = searchParams.get("address");
+        const aptosConfig = new AptosConfig({ 
+            network: Network.MAINNET,
+            apiKey: process.env.NEXT_PUBLIC_APTOS_API_KEY 
+        });
+        const aptos = new Aptos(aptosConfig);
+        const echelonClient = new EchelonClient(aptos, "0xc6bc659f1649553c1a3fa05d9727433dc03843baac29473c817d06d39e7621ba"); // Адрес контракта Echelon
+
+        if (!address) {
+            return new Response(JSON.stringify({ error: "Address is required" }), {
+                status: 400,
+                headers: { "Content-Type": "application/json" }
+            });
+        }
+
         // console.log(`🔍 Fetching Echelon positions for ${address}`);
         
         // Получаем список всех рынков

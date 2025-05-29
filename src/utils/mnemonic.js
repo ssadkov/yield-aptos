@@ -5,17 +5,24 @@ import crypto from "crypto";
  * Генерирует детерминированную BIP-39 мнемонику из email + userId + salt
  * @param {string} email - Email пользователя
  * @param {string} userId - Уникальный ID пользователя
- * @returns {string} 12-словная мнемоническая фраза
+ * @returns {Promise<string>} 12-словная мнемоническая фраза
  */
-export function generateMnemonicForUser(email, userId) {
-  const SALT = process.env.NEXT_PUBLIC_MNEMONIC_SALT || "default_salt"; // Безопасная соль из .env
-  const seedData = `${email}-${userId}-${SALT}`;
+export async function generateMnemonicForUser(email, userId) {
+  try {
+    const response = await fetch("/api/aptos/generateMnemonic", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, userId }),
+    });
 
-  // Создаем 16-байтовый хеш (SHA256) на основе данных
-  const hash = crypto.createHash("sha256").update(seedData).digest().subarray(0, 16);
+    if (!response.ok) {
+      throw new Error("Failed to generate mnemonic");
+    }
 
-  // Генерируем мнемонику BIP-39 (12 слов)
-  const mnemonic = bip39.entropyToMnemonic(hash.toString("hex"));
-
-  return mnemonic;
+    const data = await response.json();
+    return data.mnemonic;
+  } catch (error) {
+    console.error("❌ Error generating mnemonic:", error);
+    throw error;
+  }
 }

@@ -35,28 +35,34 @@ export default function Sidebar() {
       setIsLoggedIn(true);
       setInitialized(true); // ⬅️ больше не запустится
   
-      const generatedMnemonic = generateMnemonicForUser(session.user.email, session.user.id);
-      localStorage.setItem("userEmail", session.user.email);
-      localStorage.setItem("userId", session.user.id);
-      setMnemonic(generatedMnemonic);
-  
-      fetch("/api/aptos/restoreWalletFromMnemonic", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mnemonic: generatedMnemonic }),
-      })
-        .then((res) => res.json())
-        .then((data) => {
+      const initializeWallet = async () => {
+        try {
+          const generatedMnemonic = await generateMnemonicForUser(session.user.email, session.user.id);
+          localStorage.setItem("userEmail", session.user.email);
+          localStorage.setItem("userId", session.user.id);
+          setMnemonic(generatedMnemonic);
+    
+          const walletResponse = await fetch("/api/aptos/restoreWalletFromMnemonic", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ mnemonic: generatedMnemonic }),
+          });
+    
+          const data = await walletResponse.json();
           if (data.address) {
             setAptosAddress(data.address);
             localStorage.setItem("aptosWalletAddress", data.address);
-            fetchBalances(data.address);         // ✅ вызывается один раз
-            fetchUserPositions(data.address);
+            // fetchBalances(data.address);         // ✅ вызывается один раз
+            // fetchUserPositions(data.address);
           } else {
             console.error("API Error:", data.error);
           }
-        })
-        .catch((err) => console.error("Request error:", err));
+        } catch (error) {
+          console.error("Error initializing wallet:", error);
+        }
+      };
+
+      initializeWallet();
     }
   }, [session, status, initialized]);
   

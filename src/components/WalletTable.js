@@ -10,8 +10,8 @@ export default function WalletTable({ balances, positions, setMessages, handleIn
   const [isAIAgentWallet, setIsAIAgentWallet] = useState(false);
 
   useEffect(() => {
-    const walletAddress = localStorage.getItem("aptosWalletAddress");
-    setIsAIAgentWallet(!!walletAddress);
+    // Инициализация состояния после монтирования
+    setIsAIAgentWallet(false);
   }, []);
 
   const getTokenIcon = (asset) => {

@@ -18,8 +18,16 @@ export default function GoogleLoginButton() {
       localStorage.setItem("userEmail", email);
       localStorage.setItem("userId", id);
 
-      const generatedMnemonic = generateMnemonicForUser(email, id);
-      setMnemonic(generatedMnemonic);
+      const initializeMnemonic = async () => {
+        try {
+          const generatedMnemonic = await generateMnemonicForUser(email, id);
+          setMnemonic(generatedMnemonic);
+        } catch (error) {
+          console.error("Error generating mnemonic:", error);
+        }
+      };
+
+      initializeMnemonic();
     } else {
       console.log("⚠️ No session detected. Waiting for authentication...");
     }
