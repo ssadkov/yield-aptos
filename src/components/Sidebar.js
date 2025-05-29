@@ -176,6 +176,23 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
 
   if (!connected) return null;
 
+  const joulePositions = positions.filter((p) => p.protocol === "Joule" && parseFloat(p.amount) > 0);
+  const echelonPositions = positions.filter((p) => p.protocol === "Echelon" && parseFloat(p.amount) > 0);
+
+  // Используем getTokenData и formatAmount из основного компонента
+  function getTokenData(key) {
+    const formattedKey = key.startsWith("@") ? key.replace("@", "0x") : key;
+    const tokenData = JOULE_TOKENS.find((t) => t.token === formattedKey) || {};
+    return {
+      assetName: tokenData.assetName || formattedKey.slice(0, 6) + "..." + formattedKey.slice(-6),
+      provider: tokenData.provider || "Unknown Provider",
+      decimals: tokenData.decimals || 1e6,
+    };
+  }
+  function formatAmount(value, decimals) {
+    return (parseFloat(value) / decimals).toFixed(2);
+  }
+
   return (
     <div className="w-full mt-4 text-sm">
       <div className="flex justify-between items-center mb-2">
@@ -184,19 +201,53 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
           <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
         </button>
       </div>
-      {positions.length === 0 ? (
+      {joulePositions.length === 0 && echelonPositions.length === 0 ? (
         <p className="text-sm text-red-500">No positions found. Click refresh to load.</p>
       ) : (
-        <ul className="space-y-2">
-          {positions.map((p, index) => (
-            <li key={index} className="flex justify-between p-2 bg-gray-200 rounded-md">
-              <span>
-                {p.token} <span className="text-xs text-gray-500">({p.protocol})</span>
-              </span>
-              <span className="font-bold">{p.amount}</span>
-            </li>
-          ))}
-        </ul>
+        <>
+          {joulePositions.length > 0 && (
+            <div className="w-full mt-2">
+              <h3 className="text-lg font-semibold text-left flex items-center gap-2">
+                <img src="https://app.joule.finance/favicon.ico" alt="Joule" className="w-4 h-4" />
+                Positions on Joule
+              </h3>
+              <ul className="space-y-2 mt-2">
+                {joulePositions.map((pos, index) => {
+                  const tokenData = getTokenData(pos.token);
+                  return (
+                    <li key={index} className="flex items-center justify-between p-2 bg-gray-200 rounded-md">
+                      <span className="text-left">
+                        {tokenData.assetName} {tokenData.provider && <span className="text-xs text-gray-500">({tokenData.provider})</span>}
+                      </span>
+                      <span className="font-bold text-right flex-1">{formatAmount(pos.amount, tokenData.decimals)}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+          {echelonPositions.length > 0 && (
+            <div className="w-full mt-4">
+              <h3 className="text-lg font-semibold text-left flex items-center gap-2">
+                <img src="https://echelon.market/favicon.ico" alt="Echelon" className="w-5 h-5" />
+                Positions on Echelon
+              </h3>
+              <ul className="space-y-2 mt-2">
+                {echelonPositions.map((pos, index) => {
+                  const tokenData = getTokenData(pos.token);
+                  return (
+                    <li key={index} className="flex items-center justify-between p-2 bg-gray-200 rounded-md">
+                      <span className="text-left">
+                        {tokenData.assetName} {tokenData.provider && <span className="text-xs text-gray-500">({tokenData.provider})</span>}
+                      </span>
+                      <span className="font-bold text-right flex-1">{formatAmount(pos.amount, tokenData.decimals)}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
