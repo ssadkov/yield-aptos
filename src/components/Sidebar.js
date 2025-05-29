@@ -15,7 +15,7 @@ import {
 } from '@aptos-labs/wallet-adapter-react';
 import { Network } from '@aptos-labs/ts-sdk';
 
-function AptosWalletBlock() {
+function AptosWalletBlock({ onDisconnect }) {
   const { account, connect, disconnect, connected } = useWallet();
 
   const addressStr = account?.address
@@ -23,6 +23,11 @@ function AptosWalletBlock() {
       ? account.address
       : account.address.toString()
     : "";
+
+  const handleDisconnect = () => {
+    disconnect();
+    if (onDisconnect) onDisconnect();
+  };
 
   if (!connected) {
     return (
@@ -33,13 +38,13 @@ function AptosWalletBlock() {
   }
 
   return (
-    <div className="w-full text-center mt-4 p-3 rounded-lg bg-gray-200 dark:bg-gray-700">
+    <div className="w-full text-center p-3 rounded-lg bg-gray-200 dark:bg-gray-700">
       <div className="flex items-center justify-between">
         <span className="truncate text-sm">
           {addressStr ? `${addressStr.slice(0, 8)}...${addressStr.slice(-6)}` : ""}
         </span>
         <button
-          onClick={disconnect}
+          onClick={handleDisconnect}
           className="p-1 rounded-md bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500 transition"
           title="Disconnect"
         >
@@ -47,6 +52,152 @@ function AptosWalletBlock() {
         </button>
       </div>
       <div className="text-xs text-gray-500 mt-2">Aptos Wallet Connected</div>
+    </div>
+  );
+}
+
+function AptosWalletAssetsBlock({ resetOnDisconnect }) {
+  const { account, connected } = useWallet();
+  const [balances, setBalances] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!connected && resetOnDisconnect) {
+      setBalances([]);
+    }
+  }, [connected, resetOnDisconnect]);
+
+  const addressStr = account?.address
+    ? typeof account.address === "string"
+      ? account.address
+      : account.address.toString()
+    : "";
+
+  const fetchAptosBalances = async () => {
+    if (!addressStr) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/aptos/balances?address=${addressStr}`);
+      const data = await res.json();
+      setBalances(data.balances || []);
+      toast.success("Aptos assets updated!");
+    } catch (error) {
+      toast.error("Error loading Aptos balances");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!connected) return null;
+
+  return (
+    <div className="w-full mt-4 text-sm">
+      <div className="flex justify-between items-center mb-2">
+        <h3 className="text-lg font-semibold">Wallet</h3>
+        <button onClick={fetchAptosBalances} className="p-1" disabled={loading}>
+          <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
+        </button>
+      </div>
+      {balances.length === 0 ? (
+        <p className="text-sm text-red-500">No assets found. Click refresh to load.</p>
+      ) : (
+        <ul className="space-y-2">
+          {balances.map((b, index) => (
+            <li key={index} className="flex justify-between p-2 bg-gray-200 rounded-md">
+              <span>
+                {b.asset} {b.provider && <span className="text-xs text-gray-500">({b.provider})</span>}
+              </span>
+              <span className="font-bold">{b.balance}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function AptosWalletPositionsBlock({ resetOnDisconnect }) {
+  const { account, connected } = useWallet();
+  const [positions, setPositions] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!connected && resetOnDisconnect) {
+      setPositions([]);
+    }
+  }, [connected, resetOnDisconnect]);
+
+  const addressStr = account?.address
+    ? typeof account.address === "string"
+      ? account.address
+      : account.address.toString()
+    : "";
+
+  const fetchAptosPositions = async () => {
+    if (!addressStr) return;
+    setLoading(true);
+    try {
+      // Joule
+      const resJoule = await fetch(`/api/joule/userPositions?address=${addressStr}`);
+      const dataJoule = await resJoule.json();
+      let joulePositions = [];
+      if (dataJoule?.userPositions?.length > 0) {
+        joulePositions = dataJoule.userPositions[0].positions_map.data.flatMap((position) =>
+          position.value.lend_positions.data.map((pos) => {
+            const token = pos.key;
+            const amount = pos.value;
+            return {
+              token,
+              amount,
+              protocol: "Joule",
+            };
+          })
+        );
+      }
+      // Echelon
+      const resEchelon = await fetch(`/api/echelon/userPositions?address=${addressStr}`);
+      const dataEchelon = await resEchelon.json();
+      let echelonPositions = [];
+      if (dataEchelon?.userPositions?.length > 0) {
+        echelonPositions = dataEchelon.userPositions.map((pos) => ({
+          token: pos.coin,
+          amount: pos.supply,
+          protocol: "Echelon",
+        }));
+      }
+      setPositions([...joulePositions, ...echelonPositions]);
+      toast.success("Aptos positions updated!");
+    } catch (error) {
+      toast.error("Error loading Aptos positions");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!connected) return null;
+
+  return (
+    <div className="w-full mt-4 text-sm">
+      <div className="flex justify-between items-center mb-2">
+        <h3 className="text-lg font-semibold">Positions</h3>
+        <button onClick={fetchAptosPositions} className="p-1" disabled={loading}>
+          <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
+        </button>
+      </div>
+      {positions.length === 0 ? (
+        <p className="text-sm text-red-500">No positions found. Click refresh to load.</p>
+      ) : (
+        <ul className="space-y-2">
+          {positions.map((p, index) => (
+            <li key={index} className="flex justify-between p-2 bg-gray-200 rounded-md">
+              <span>
+                {p.token} <span className="text-xs text-gray-500">({p.protocol})</span>
+              </span>
+              <span className="font-bold">{p.amount}</span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
@@ -63,7 +214,8 @@ export default function Sidebar() {
   const [loadingStrategy, setLoadingStrategy] = useState({});
   const { handleBotMessage } = useSessionData(); // ✅ Используем handleBotMessage
 
-  
+  // Для сброса балансов/позиций Aptos Wallet при disconnect
+  const [resetAptos, setResetAptos] = useState(false);
 
   console.log("🔄 Sidebar session status:", status, session);
 
@@ -316,6 +468,10 @@ export default function Sidebar() {
   
   // console.log("📊 Rendered positions in UI:", positions);
 
+  const handleAptosDisconnect = () => {
+    setResetAptos(true);
+    setTimeout(() => setResetAptos(false), 100); // сбросить reset через 100мс
+  };
 
   return (
     <AptosWalletAdapterProvider
@@ -500,13 +656,18 @@ export default function Sidebar() {
                     </ul>
                   </div>
                 )}
+                <AptosWalletBlock onDisconnect={handleAptosDisconnect} />
+                <AptosWalletAssetsBlock resetOnDisconnect={resetAptos} />
+                <AptosWalletPositionsBlock resetOnDisconnect={resetAptos} />
                 </div>
               ) : (
                 <>
                   <Button onClick={() => signIn("google", { callbackUrl: "/" })} className="w-full mb-2">
                     Sign in with Google
                   </Button>
-                  <AptosWalletBlock />
+                  <AptosWalletBlock onDisconnect={handleAptosDisconnect} />
+                  <AptosWalletAssetsBlock resetOnDisconnect={resetAptos} />
+                  <AptosWalletPositionsBlock resetOnDisconnect={resetAptos} />
                 </>
               )}
             </CardContent>
