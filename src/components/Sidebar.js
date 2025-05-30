@@ -93,7 +93,7 @@ function AptosWalletAssetsBlock({ resetOnDisconnect }) {
   return (
     <div className="w-full mt-4 text-sm">
       <div className="flex justify-between items-center mb-2">
-        <h3 className="text-lg font-semibold">Wallet</h3>
+        <h3 className="text-lg font-semibold">Assets</h3>
         <button onClick={fetchAptosBalances} className="p-1" disabled={loading}>
           <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
         </button>
