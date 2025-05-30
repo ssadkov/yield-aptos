@@ -165,6 +165,24 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
           protocol: "Echelon",
         }));
       }
+      // Aries
+      const resAries = await fetch(`/api/aries/userPositions?address=${addressStr}`);
+      const dataAries = await resAries.json();
+      let ariesPositions = [];
+      if (dataAries?.profiles?.profiles) {
+        for (const [profileName, profile] of Object.entries(dataAries.profiles.profiles)) {
+          const deposits = profile.deposits || {};
+          for (const [tokenAddress, depositData] of Object.entries(deposits)) {
+            if (parseFloat(depositData.collateral_coins) > 0) {
+              ariesPositions.push({
+                token: tokenAddress,
+                amount: depositData.collateral_coins,
+                protocol: "Aries",
+              });
+            }
+          }
+        }
+      }
       // Hyperion
       const resHyperion = await fetch(`/api/hyperion/userPositions?address=${addressStr}`);
       const dataHyperion = await resHyperion.json();
@@ -177,7 +195,7 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
           protocol: "Hyperion",
         }));
       }
-      setPositions([...joulePositions, ...echelonPositions, ...hyperionPositions]);
+      setPositions([...joulePositions, ...echelonPositions, ...ariesPositions, ...hyperionPositions]);
       toast.success("Aptos positions updated!");
     } catch (error) {
       toast.error("Error loading Aptos positions");
@@ -190,6 +208,7 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
 
   const joulePositions = positions.filter((p) => p.protocol === "Joule" && parseFloat(p.amount) > 0);
   const echelonPositions = positions.filter((p) => p.protocol === "Echelon" && parseFloat(p.amount) > 0);
+  const ariesPositions = positions.filter((p) => p.protocol === "Aries" && parseFloat(p.amount) > 0);
   const hyperionPositions = positions.filter((p) => p.protocol === "Hyperion" && parseFloat(p.amountUSD) > 0);
 
   // Используем getTokenData и formatAmount из основного компонента
@@ -214,7 +233,7 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
           <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
         </button>
       </div>
-      {joulePositions.length === 0 && echelonPositions.length === 0 && hyperionPositions.length === 0 ? (
+      {joulePositions.length === 0 && echelonPositions.length === 0 && ariesPositions.length === 0 && hyperionPositions.length === 0 ? (
         <p className="text-sm text-red-500">No positions found. Click refresh to load.</p>
       ) : (
         <>
@@ -247,6 +266,27 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
               </h3>
               <ul className="space-y-2 mt-2">
                 {echelonPositions.map((pos, index) => {
+                  const tokenData = getTokenData(pos.token);
+                  return (
+                    <li key={index} className="flex items-center justify-between p-2 bg-gray-200 rounded-md">
+                      <span className="text-left">
+                        {tokenData.assetName} {tokenData.provider && <span className="text-xs text-gray-500">({tokenData.provider})</span>}
+                      </span>
+                      <span className="font-bold text-right flex-1">{formatAmount(pos.amount, tokenData.decimals)}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+          {ariesPositions.length > 0 && (
+            <div className="w-full mt-4">
+              <h3 className="text-lg font-semibold text-left flex items-center gap-2">
+                <img src="https://ariesmarkets.xyz/apple-touch-icon.png" alt="Aries" className="w-5 h-5" />
+                Positions on Aries
+              </h3>
+              <ul className="space-y-2 mt-2">
+                {ariesPositions.map((pos, index) => {
                   const tokenData = getTokenData(pos.token);
                   return (
                     <li key={index} className="flex items-center justify-between p-2 bg-gray-200 rounded-md">
