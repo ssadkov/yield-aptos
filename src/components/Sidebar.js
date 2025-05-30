@@ -165,7 +165,19 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
           protocol: "Echelon",
         }));
       }
-      setPositions([...joulePositions, ...echelonPositions]);
+      // Hyperion
+      const resHyperion = await fetch(`/api/hyperion/userPositions?address=${addressStr}`);
+      const dataHyperion = await resHyperion.json();
+      let hyperionPositions = [];
+      if (dataHyperion?.success && dataHyperion?.data?.length > 0) {
+        hyperionPositions = dataHyperion.data.map((pos) => ({
+          token0: pos.position.pool.token1Info.symbol,
+          token1: pos.position.pool.token2Info.symbol,
+          amountUSD: pos.value,
+          protocol: "Hyperion",
+        }));
+      }
+      setPositions([...joulePositions, ...echelonPositions, ...hyperionPositions]);
       toast.success("Aptos positions updated!");
     } catch (error) {
       toast.error("Error loading Aptos positions");
@@ -178,6 +190,7 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
 
   const joulePositions = positions.filter((p) => p.protocol === "Joule" && parseFloat(p.amount) > 0);
   const echelonPositions = positions.filter((p) => p.protocol === "Echelon" && parseFloat(p.amount) > 0);
+  const hyperionPositions = positions.filter((p) => p.protocol === "Hyperion" && parseFloat(p.amountUSD) > 0);
 
   // Используем getTokenData и formatAmount из основного компонента
   function getTokenData(key) {
@@ -201,7 +214,7 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
           <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
         </button>
       </div>
-      {joulePositions.length === 0 && echelonPositions.length === 0 ? (
+      {joulePositions.length === 0 && echelonPositions.length === 0 && hyperionPositions.length === 0 ? (
         <p className="text-sm text-red-500">No positions found. Click refresh to load.</p>
       ) : (
         <>
@@ -244,6 +257,24 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
                     </li>
                   );
                 })}
+              </ul>
+            </div>
+          )}
+          {hyperionPositions.length > 0 && (
+            <div className="w-full mt-4">
+              <h3 className="text-lg font-semibold text-left flex items-center gap-2">
+                <img src="https://hyperion.xyz/fav.svg" alt="Hyperion" className="w-5 h-5" />
+                Positions on Hyperion
+              </h3>
+              <ul className="space-y-2 mt-2">
+                {hyperionPositions.map((pos, index) => (
+                  <li key={index} className="flex items-center justify-between p-2 bg-gray-200 rounded-md">
+                    <span className="text-left">
+                      {pos.token0}/{pos.token1}
+                    </span>
+                    <span className="font-bold text-right flex-1">${parseFloat(pos.amountUSD).toFixed(2)}</span>
+                  </li>
+                ))}
               </ul>
             </div>
           )}

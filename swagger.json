@@ -1159,7 +1159,7 @@
       "get": {
         "tags": ["hyperion"],
         "summary": "Get user positions in Hyperion",
-        "description": "Returns all positions for a specific wallet address in the Hyperion protocol.",
+        "description": "Returns all positions for a specific wallet address in the Hyperion protocol. Each position includes farm rewards, fees, and pool information.",
         "parameters": [
           {
             "name": "address",
@@ -1178,13 +1178,90 @@
               "application/json": {
                 "example": {
                   "success": true,
-                  "data": []
+                  "data": [
+                    {
+                      "isActive": false,
+                      "value": "38.88782845539025",
+                      "farm": {
+                        "claimed": [],
+                        "unclaimed": [
+                          {
+                            "amount": "38267",
+                            "amountUSD": "0.0019356633767257",
+                            "token": "0x000000000000000000000000000000000000000000000000000000000000000a"
+                          }
+                        ]
+                      },
+                      "fees": {
+                        "claimed": [],
+                        "unclaimed": [
+                          {
+                            "amount": "2722",
+                            "amountUSD": "0.00272295572142",
+                            "token": "0x357b0b74bc833e95a115ad22604854d6b0fca151cecd94111770e5d6ffc9dc2b"
+                          },
+                          {
+                            "amount": "3962",
+                            "amountUSD": "0.0039614074829",
+                            "token": "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b"
+                          }
+                        ]
+                      },
+                      "position": {
+                        "objectId": "0xfd6e59e313a4b71fde6c89e5f2841035a06ad838fe442c76d9bcd1a73f3767cc",
+                        "poolId": "0xd3894aca06d5f42b27c89e6f448114b3ed6a1ba07f992a58b2126c71dd83c127",
+                        "tickLower": 1,
+                        "tickUpper": 3,
+                        "createdAt": "2025-05-29T19:32:37.723Z",
+                        "pool": {
+                          "currentTick": 3,
+                          "feeRate": "100",
+                          "feeTier": 0,
+                          "poolId": "0xd3894aca06d5f42b27c89e6f448114b3ed6a1ba07f992a58b2126c71dd83c127",
+                          "senderAddress": "0xe58e69c820bbf937cafb9f0ea0833db0ed2cd7959cfd0e348130551da8ba734a",
+                          "sqrtPrice": "18450155679997593351",
+                          "token1": "0x357b0b74bc833e95a115ad22604854d6b0fca151cecd94111770e5d6ffc9dc2b",
+                          "token2": "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b",
+                          "token1Info": {
+                            "assetType": "0x357b0b74bc833e95a115ad22604854d6b0fca151cecd94111770e5d6ffc9dc2b",
+                            "bridge": null,
+                            "coinMarketcapId": "825",
+                            "coinType": null,
+                            "coingeckoId": "tether",
+                            "decimals": 6,
+                            "faType": "0x357b0b74bc833e95a115ad22604854d6b0fca151cecd94111770e5d6ffc9dc2b",
+                            "hyperfluidSymbol": "USDt",
+                            "logoUrl": "https://assets.hyperion.xyz/aptos-token/main/logos/USDT.svg",
+                            "name": "Tether USD",
+                            "symbol": "USDt",
+                            "isBanned": false,
+                            "websiteUrl": "https://tether.to"
+                          },
+                          "token2Info": {
+                            "assetType": "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b",
+                            "bridge": null,
+                            "coinMarketcapId": "3408",
+                            "coinType": null,
+                            "coingeckoId": "usd-coin",
+                            "decimals": 6,
+                            "faType": "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b",
+                            "hyperfluidSymbol": "USDC",
+                            "logoUrl": "https://assets.hyperion.xyz/aptos-token/main/logos/USDC.svg",
+                            "name": "USDC",
+                            "symbol": "USDC",
+                            "isBanned": false,
+                            "websiteUrl": "https://circle.com/usdc"
+                          }
+                        }
+                      }
+                    }
+                  ]
                 }
               }
             }
           },
           "400": {
-            "description": "Bad request - missing address parameter",
+            "description": "Bad request - missing or invalid address parameter",
             "content": {
               "application/json": {
                 "example": {
@@ -1201,7 +1278,7 @@
                 "example": {
                   "success": false,
                   "error": "Failed to fetch Hyperion user positions",
-                  "details": "Error message details"
+                  "details": "Invalid address: {...}"
                 }
               }
             }
