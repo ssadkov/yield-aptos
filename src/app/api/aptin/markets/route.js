@@ -6,7 +6,7 @@ const USER_WALLET = '0xc9eceb24a8e6cb1065a150587e6ccd604fcc644b73513184309d8f47c
 export async function GET() {
   try {
     const lendingService = new LendingService(USER_WALLET);
-
+ 
     // Получаем данные о пулах
     const pools = await lendingService.getPoolInfos();
 
