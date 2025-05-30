@@ -1,0 +1,3 @@
+//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
+@echelonmarket:registry=https://npm.pkg.github.com
+@aries-markets:registry=https://npm.pkg.github.com 
