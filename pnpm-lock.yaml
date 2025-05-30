@@ -27,7 +27,7 @@ importers:
         specifier: ^0.0.1
         version: 0.0.1(@mysten/sui.js@0.54.1(typescript@5.8.3))(@trpc/server@10.0.0-proxy-beta.15)(aptos@1.21.0)(bufferutil@4.0.9)(typescript@5.8.3)(utf-8-validate@5.0.10)
       '@echelonmarket/echelon-sdk':
-        specifier: ^2.0.2
+        specifier: ^2.1.0
         version: 2.1.0(@aptos-labs/wallet-adapter-react@4.1.5(@aptos-labs/ts-sdk@1.39.0(axios@1.9.0)(got@11.8.6))(@mizuwallet-sdk/core@1.4.0(@aptos-labs/ts-sdk@1.39.0(axios@1.9.0)(got@11.8.6))(@mizuwallet-sdk/protocol@0.0.6)(graphql-request@7.2.0(graphql@16.11.0)))(@mizuwallet-sdk/protocol@0.0.6)(@telegram-apps/bridge@1.9.2)(@types/react@19.0.10)(@wallet-standard/core@1.0.3)(aptos@1.21.0)(axios@1.9.0)(got@11.8.6)(react@18.3.1))(axios@1.9.0)(bufferutil@4.0.9)(got@11.8.6)(react@18.3.1)(typescript@5.8.3)(utf-8-validate@5.0.10)
       '@hyperionxyz/sdk':
         specifier: ^0.0.13
