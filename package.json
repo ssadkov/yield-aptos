@@ -41,7 +41,8 @@
     "swagger-ui-express": "^5.0.1",
     "swagger-ui-react": "^5.19.0",
     "tailwind-merge": "^3.0.1",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "zod": "^3.25.42"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
