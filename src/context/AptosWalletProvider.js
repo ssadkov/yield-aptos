@@ -5,7 +5,7 @@ import { useState, useEffect, createContext, useContext } from "react";
 import { AptosClient } from "aptos";
 
 // RPC-узел Aptos (можно поменять на testnet)
-const APTOS_RPC = "https://fullnode.mainnet.aptoslabs.com";
+const APTOS_RPC = `${process.env.APTOS_RPC_URL}?api_key=${process.env.APTOS_API_KEY}`;
 const client = new AptosClient(APTOS_RPC);
 
 // Контекст для управления состоянием кошелька

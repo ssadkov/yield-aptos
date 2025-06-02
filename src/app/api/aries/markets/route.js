@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { AptosClient } from "aptos";
 import { AriesSDK } from "@aries-markets/tssdk";
 
-const aptosClient = new AptosClient(process.env.APTOS_RPC_URL);
+const aptosClient = new AptosClient(`${process.env.APTOS_RPC_URL}?api_key=${process.env.APTOS_API_KEY}`);
 const sdk = new AriesSDK(aptosClient);
 
 export async function GET() {

@@ -11,7 +11,7 @@ export async function GET(req) {
         const address = searchParams.get("address");
         const aptosConfig = new AptosConfig({ 
             network: Network.MAINNET,
-            apiKey: process.env.NEXT_PUBLIC_APTOS_API_KEY 
+            apiKey: process.env.APTOS_API_KEY 
         });
         const aptos = new Aptos(aptosConfig);
         const echelonClient = new EchelonClient(aptos, "0xc6bc659f1649553c1a3fa05d9727433dc03843baac29473c817d06d39e7621ba"); // Адрес контракта Echelon
