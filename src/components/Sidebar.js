@@ -29,9 +29,18 @@ function AptosWalletBlock({ onDisconnect }) {
     if (onDisconnect) onDisconnect();
   };
 
+  const handleConnect = async () => {
+    try {
+      await connect('Petra');
+    } catch (error) {
+      console.error('Error connecting wallet:', error);
+      toast.error('Failed to connect wallet. Please try again.');
+    }
+  };
+
   if (!connected) {
     return (
-      <Button onClick={() => connect('Petra')} className="w-full" variant="secondary">
+      <Button onClick={handleConnect} className="w-full" variant="secondary">
         Connect Aptos wallet
       </Button>
     );
@@ -66,6 +75,12 @@ function AptosWalletAssetsBlock({ resetOnDisconnect }) {
       setBalances([]);
     }
   }, [connected, resetOnDisconnect]);
+
+  useEffect(() => {
+    if (connected && account?.address) {
+      fetchAptosBalances();
+    }
+  }, [connected, account?.address]);
 
   const addressStr = account?.address
     ? typeof account.address === "string"
@@ -126,6 +141,12 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
       setPositions([]);
     }
   }, [connected, resetOnDisconnect]);
+
+  useEffect(() => {
+    if (connected && account?.address) {
+      fetchAptosPositions();
+    }
+  }, [connected, account?.address]);
 
   const addressStr = account?.address
     ? typeof account.address === "string"
