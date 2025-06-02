@@ -324,7 +324,7 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
           {hyperionPositions.length > 0 && (
             <div className="w-full mt-4">
               <h3 className="text-lg font-semibold text-left flex items-center gap-2">
-                <img src="https://hyperion.xyz/fav.svg" alt="Hyperion" className="w-5 h-5" />
+                <img src="https://hyperion.xyz/fav-new.svg" alt="Hyperion" className="w-5 h-5" />
                 Positions on Hyperion
               </h3>
               <ul className="space-y-2 mt-2">
