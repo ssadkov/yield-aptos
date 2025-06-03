@@ -20,7 +20,7 @@ export async function GET(req) {
         // ✅ Фикс обработки приватного ключа
         const aptosConfig = new AptosConfig({ 
             network: Network.MAINNET,
-            apiKey: process.env.NEXT_PUBLIC_APTOS_API_KEY 
+            apiKey: process.env.APTOS_API_KEY 
         });
         const aptos = new Aptos(aptosConfig);
 		
@@ -57,7 +57,7 @@ export async function POST(request) {
     const { privateKey } = await request.json();
     const aptosConfig = new AptosConfig({ 
       network: Network.MAINNET,
-      apiKey: process.env.NEXT_PUBLIC_APTOS_API_KEY 
+      apiKey: process.env.APTOS_API_KEY 
     });
     const aptos = new Aptos(aptosConfig);
 

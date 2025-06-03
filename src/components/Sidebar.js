@@ -198,35 +198,56 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
     setLoading(true);
     try {
       // Joule
-      const resJoule = await fetch(`/api/joule/userPositions?address=${addressStr}`);
+      const resJoule = await fetch(`/api/joule/userPositions?address=${addressStr}`, {
+        headers: {
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_APTOS_API_KEY}`,
+          'X-API-Key': process.env.NEXT_PUBLIC_APTOS_API_KEY
+        }
+      });
       const dataJoule = await resJoule.json();
       let joulePositions = [];
       if (dataJoule?.userPositions?.length > 0) {
         joulePositions = dataJoule.userPositions[0].positions_map.data.flatMap((position) =>
           position.value.lend_positions.data.map((pos) => {
-            const token = pos.key;
-            const amount = pos.value;
+            const tokenData = getTokenData(pos.key);
             return {
-              token,
-              amount,
+              token: tokenData.assetName,
+              amount: formatAmount(pos.value, tokenData.decimals),
+              provider: tokenData.provider,
               protocol: "Joule",
+              tokenType: pos.key,
             };
           })
         );
       }
       // Echelon
-      const resEchelon = await fetch(`/api/echelon/userPositions?address=${addressStr}`);
+      const resEchelon = await fetch(`/api/echelon/userPositions?address=${addressStr}`, {
+        headers: {
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_APTOS_API_KEY}`,
+          'X-API-Key': process.env.NEXT_PUBLIC_APTOS_API_KEY
+        }
+      });
       const dataEchelon = await resEchelon.json();
       let echelonPositions = [];
       if (dataEchelon?.userPositions?.length > 0) {
-        echelonPositions = dataEchelon.userPositions.map((pos) => ({
-          token: pos.coin,
-          amount: pos.supply,
-          protocol: "Echelon",
-        }));
+        echelonPositions = dataEchelon.userPositions.map((pos) => {
+          const tokenData = getTokenData(pos.coin);
+          return {
+            token: tokenData.assetName,
+            amount: formatAmount(pos.supply, tokenData.decimals),
+            provider: tokenData.provider,
+            protocol: "Echelon",
+            tokenType: pos.coin,
+          };
+        });
       }
       // Aries
-      const resAries = await fetch(`/api/aries/userPositions?address=${addressStr}`);
+      const resAries = await fetch(`/api/aries/userPositions?address=${addressStr}`, {
+        headers: {
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_APTOS_API_KEY}`,
+          'X-API-Key': process.env.NEXT_PUBLIC_APTOS_API_KEY
+        }
+      });
       const dataAries = await resAries.json();
       let ariesPositions = [];
       if (dataAries?.profiles?.profiles) {
@@ -244,7 +265,12 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
         }
       }
       // Hyperion
-      const resHyperion = await fetch(`/api/hyperion/userPositions?address=${addressStr}`);
+      const resHyperion = await fetch(`/api/hyperion/userPositions?address=${addressStr}`, {
+        headers: {
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_APTOS_API_KEY}`,
+          'X-API-Key': process.env.NEXT_PUBLIC_APTOS_API_KEY
+        }
+      });
       const dataHyperion = await resHyperion.json();
       let hyperionPositions = [];
       if (dataHyperion?.success && dataHyperion?.data?.length > 0) {
@@ -258,6 +284,7 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
       setPositions([...joulePositions, ...echelonPositions, ...ariesPositions, ...hyperionPositions]);
       toast.success("Aptos positions updated!");
     } catch (error) {
+      console.error("Error loading positions:", error);
       toast.error("Error loading Aptos positions");
     } finally {
       setLoading(false);
@@ -330,34 +357,28 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
             protocol="Joule"
             positions={joulePositions}
             icon="https://app.joule.finance/favicon.ico"
-            formatPosition={(pos) => {
-              const tokenData = getTokenData(pos.token);
-              return (
-                <>
-                  <span className="text-left">
-                    {tokenData.assetName} {tokenData.provider && <span className="text-xs text-gray-500">({tokenData.provider})</span>}
-                  </span>
-                  <span className="font-bold text-right flex-1">{formatAmount(pos.amount, tokenData.decimals)}</span>
-                </>
-              );
-            }}
+            formatPosition={(pos) => (
+              <>
+                <span className="text-left">
+                  {pos.token} {pos.provider && <span className="text-xs text-gray-500">({pos.provider})</span>}
+                </span>
+                <span className="font-bold text-right flex-1">{pos.amount}</span>
+              </>
+            )}
           />
 
           <ProtocolBlock
             protocol="Echelon"
             positions={echelonPositions}
             icon="https://echelon.market/favicon.ico"
-            formatPosition={(pos) => {
-              const tokenData = getTokenData(pos.token);
-              return (
-                <>
-                  <span className="text-left">
-                    {tokenData.assetName} {tokenData.provider && <span className="text-xs text-gray-500">({tokenData.provider})</span>}
-                  </span>
-                  <span className="font-bold text-right flex-1">{formatAmount(pos.amount, tokenData.decimals)}</span>
-                </>
-              );
-            }}
+            formatPosition={(pos) => (
+              <>
+                <span className="text-left">
+                  {pos.token} {pos.provider && <span className="text-xs text-gray-500">({pos.provider})</span>}
+                </span>
+                <span className="font-bold text-right flex-1">{pos.amount}</span>
+              </>
+            )}
           />
 
           <ProtocolBlock
@@ -598,8 +619,6 @@ export default function Sidebar() {
       console.log(`🔄 Fetching Echelon positions for ${address}`);
       const res = await fetch(`/api/echelon/userPositions?address=${address}`);
       const data = await res.json();
-  
-     // console.log("📊 Raw Echelon positions:", data.userPositions);
   
       if (!data?.userPositions?.length) return [];
   
@@ -895,14 +914,17 @@ export default function Sidebar() {
                           {expandedProtocols[protocol] && (
                             <div className="p-3 bg-white dark:bg-gray-900">
                               <ul className="space-y-2">
-                                {protocolPositions.map((pos, idx) => (
-                                  <li key={idx} className="flex justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
-                                    <span>
-                                      {pos.asset} {pos.provider && <span className="text-xs text-gray-500">({pos.provider})</span>}
-                                    </span>
-                                    <span className="font-bold">{pos.amount}</span>
-                                  </li>
-                                ))}
+                                {protocolPositions.map((pos, idx) => {
+                                  const tokenData = getTokenData(pos.tokenType || pos.token);
+                                  return (
+                                    <li key={idx} className="flex justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
+                                      <span>
+                                        {tokenData.assetName} {tokenData.provider && <span className="text-xs text-gray-500">({tokenData.provider})</span>}
+                                      </span>
+                                      <span className="font-bold">{pos.amount}</span>
+                                    </li>
+                                  );
+                                })}
                               </ul>
                             </div>
                           )}

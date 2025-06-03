@@ -49,7 +49,8 @@ export async function GET(req) {
     try {
       const echelonResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/echelon/userPositions?address=${address}`, {
         headers: {
-          'Authorization': `Bearer ${process.env.APTOS_API_KEY}`
+          'Authorization': `Bearer ${process.env.APTOS_API_KEY}`,
+          'X-API-Key': process.env.APTOS_API_KEY
         }
       });
       if (echelonResponse.ok) {
@@ -79,7 +80,8 @@ export async function GET(req) {
     try {
       const ariesResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/aries/userPositions?address=${address}`, {
         headers: {
-          'Authorization': `Bearer ${process.env.APTOS_API_KEY}`
+          'Authorization': `Bearer ${process.env.APTOS_API_KEY}`,
+          'X-API-Key': process.env.APTOS_API_KEY
         }
       });
       if (ariesResponse.ok) {
@@ -118,7 +120,8 @@ export async function GET(req) {
     try {
       const jouleResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/joule/userPositions?address=${address}`, {
         headers: {
-          'Authorization': `Bearer ${process.env.APTOS_API_KEY}`
+          'Authorization': `Bearer ${process.env.APTOS_API_KEY}`,
+          'X-API-Key': process.env.APTOS_API_KEY
         }
       });
       if (jouleResponse.ok) {
