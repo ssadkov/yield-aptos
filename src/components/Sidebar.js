@@ -407,6 +407,12 @@ export default function Sidebar() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loadingStrategy, setLoadingStrategy] = useState({});
   const [isExpanded, setIsExpanded] = useState(true);
+  const [expandedProtocols, setExpandedProtocols] = useState({
+    Joule: true,
+    Echelon: true,
+    Aries: true,
+    Hyperion: true
+  });
   const { handleBotMessage } = useSessionData();
 
   // Для сброса балансов/позиций Aptos Wallet при disconnect
@@ -698,6 +704,13 @@ export default function Sidebar() {
     setTimeout(() => setResetAptos(false), 100); // сбросить reset через 100мс
   };
 
+  const toggleProtocol = (protocol) => {
+    setExpandedProtocols(prev => ({
+      ...prev,
+      [protocol]: !prev[protocol]
+    }));
+  };
+
   return (
     <AptosWalletAdapterProvider
       optInWallets={['Petra']}
@@ -840,6 +853,63 @@ export default function Sidebar() {
                       </div>
                     )}
                   </div>
+
+                  {/* Google Wallet Protocols */}
+                  {positions.length > 0 && (
+                    <div className="w-full mt-4 text-sm">
+                      {Object.entries(
+                        positions.reduce((acc, pos) => {
+                          if (!acc[pos.protocol]) {
+                            acc[pos.protocol] = [];
+                          }
+                          acc[pos.protocol].push(pos);
+                          return acc;
+                        }, {})
+                      ).map(([protocol, protocolPositions]) => (
+                        <div key={protocol} className="w-full mt-4 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                          <div 
+                            onClick={() => toggleProtocol(protocol)}
+                            className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                          >
+                            <div className="flex items-center gap-2">
+                              <img 
+                                src={
+                                  protocol === "Joule" ? "https://app.joule.finance/favicon.ico" :
+                                  protocol === "Echelon" ? "https://echelon.market/favicon.ico" :
+                                  protocol === "Aries" ? "https://ariesmarkets.xyz/apple-touch-icon.png" :
+                                  protocol === "Hyperion" ? "https://hyperion.xyz/fav-new.svg" :
+                                  ""
+                                } 
+                                alt={protocol} 
+                                className="w-5 h-5"
+                              />
+                              <h3 className="text-lg font-semibold">{protocol}</h3>
+                            </div>
+                            {expandedProtocols[protocol] ? (
+                              <ChevronDown size={20} className="text-gray-500" />
+                            ) : (
+                              <ChevronRight size={20} className="text-gray-500" />
+                            )}
+                          </div>
+
+                          {expandedProtocols[protocol] && (
+                            <div className="p-3 bg-white dark:bg-gray-900">
+                              <ul className="space-y-2">
+                                {protocolPositions.map((pos, idx) => (
+                                  <li key={idx} className="flex justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
+                                    <span>
+                                      {pos.asset} {pos.provider && <span className="text-xs text-gray-500">({pos.provider})</span>}
+                                    </span>
+                                    <span className="font-bold">{pos.amount}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
                   <div className="mt-8">
                     <AptosWalletBlock onDisconnect={handleAptosDisconnect} />
