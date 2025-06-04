@@ -1051,7 +1051,7 @@ export default function Sidebar() {
 
         <aside
           className={`fixed top-0 left-0 h-full w-72 bg-gray-100 dark:bg-gray-900 transition-transform duration-300 ease-in-out z-40
-            ${isOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0 lg:w-80 border-r border-border flex justify-center`}
+            ${isOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0 lg:w-[360px] border-r border-border flex justify-center`}
         >
           <Card className="w-[90%] bg-white dark:bg-gray-800 text-foreground shadow-md mt-16 lg:mt-12 mb-12 h-auto overflow-y-auto">
             <CardContent className="p-6 flex flex-col items-center">
