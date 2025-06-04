@@ -190,7 +190,8 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
   const [expandedProtocols, setExpandedProtocols] = useState({
     Joule: true,
     Echelon: true,
-    Aries: true
+    Aries: true,
+    Hyperion: true
   });
 
   useEffect(() => {
@@ -358,6 +359,35 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
     }
   };
 
+  const fetchHyperionPositions = async (address) => {
+    try {
+      console.log('🔍 Запрашиваем Hyperion позиции для адреса:', address);
+      const resHyperion = await fetch(`/api/hyperion/userPositions?address=${address}`);
+      const dataHyperion = await resHyperion.json();
+      console.log('📊 Hyperion позиции (сырые):', dataHyperion);
+      
+      if (!dataHyperion?.success || !dataHyperion?.data?.length) return [];
+      
+      return dataHyperion.data.map((pos) => {
+        const token1Info = pos.position.pool.token1Info;
+        const token2Info = pos.position.pool.token2Info;
+        return {
+          token: `${token1Info.symbol}/${token2Info.symbol}`,
+          amount: parseFloat(pos.value),
+          provider: "Hyperion",
+          protocol: "Hyperion",
+          tokenType: pos.position.poolId,
+          isActive: pos.isActive,
+          farm: pos.farm,
+          fees: pos.fees
+        };
+      });
+    } catch (error) {
+      console.error("❌ Error fetching Hyperion positions:", error);
+      return [];
+    }
+  };
+
   const fetchAptosPositions = async () => {
     if (!addressStr) return;
     setLoading(true);
@@ -388,8 +418,9 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
       const joulePositions = await fetchJoulePositions(addressStr, apiKey);
       const echelonPositions = await fetchEchelonPositions(addressStr, apiKey);
       const ariesPositions = await fetchAriesPositions(addressStr, apiKey);
+      const hyperionPositions = await fetchHyperionPositions(addressStr);
       
-      const allPositions = [...joulePositions, ...echelonPositions, ...ariesPositions];
+      const allPositions = [...joulePositions, ...echelonPositions, ...ariesPositions, ...hyperionPositions];
       console.log('📊 Все позиции:', allPositions);
       
       // Сохраняем в кэш
@@ -411,6 +442,7 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
   const joulePositions = positions.filter((p) => p.protocol === "Joule" && parseFloat(p.amount) > 0);
   const echelonPositions = positions.filter((p) => p.protocol === "Echelon" && parseFloat(p.amount) > 0);
   const ariesPositions = positions.filter((p) => p.protocol === "Aries" && parseFloat(p.amount) > 0);
+  const hyperionPositions = positions.filter((p) => p.protocol === "Hyperion" && parseFloat(p.amount) > 0);
 
   return (
     <div className="w-full mt-4 text-sm">
@@ -427,7 +459,7 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
 
       {loading ? (
         <p className="text-sm text-gray-500">Loading positions...</p>
-      ) : joulePositions.length === 0 && echelonPositions.length === 0 && ariesPositions.length === 0 ? (
+      ) : joulePositions.length === 0 && echelonPositions.length === 0 && ariesPositions.length === 0 && hyperionPositions.length === 0 ? (
         <p className="text-sm text-red-500">No positions found. Click refresh to load.</p>
       ) : (
         <>
@@ -531,6 +563,66 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
                           </span>
                           <span className="font-bold">{pos.amount}</span>
                         </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
+          {hyperionPositions.length > 0 && (
+            <div className="w-full mt-4 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+              <div 
+                onClick={() => toggleProtocol("Hyperion")}
+                className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <img src="https://hyperion.xyz/fav-new.svg" alt="Hyperion" className="w-5 h-5" />
+                  <h3 className="text-lg font-semibold">Hyperion</h3>
+                </div>
+                {expandedProtocols["Hyperion"] ? (
+                  <ChevronDown size={20} className="text-gray-500" />
+                ) : (
+                  <ChevronRight size={20} className="text-gray-500" />
+                )}
+              </div>
+
+              {expandedProtocols["Hyperion"] && (
+                <div className="p-3 bg-white dark:bg-gray-900">
+                  <ul className="space-y-2">
+                    {hyperionPositions.map((pos, index) => (
+                      <li key={index} className="flex flex-col p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
+                        <div className="flex justify-between items-center">
+                          <span>
+                            {pos.token} {pos.isActive !== undefined && (
+                              <span className={`ml-2 px-2 py-0.5 text-xs rounded ${pos.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                {pos.isActive ? 'Active' : 'Inactive'}
+                              </span>
+                            )}
+                          </span>
+                          <span className="font-bold">{pos.amount}</span>
+                        </div>
+                        {pos.farm && pos.farm.unclaimed.length > 0 && (
+                          <div className="mt-1 text-sm text-gray-600">
+                            <div className="font-medium">Farm Rewards:</div>
+                            {pos.farm.unclaimed.map((reward, idx) => (
+                              <div key={idx} className="ml-2">
+                                {reward.amountUSD} USD ({reward.amount} tokens)
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {pos.fees && pos.fees.unclaimed.length > 0 && (
+                          <div className="mt-1 text-sm text-gray-600">
+                            <div className="font-medium">Unclaimed Fees:</div>
+                            {pos.fees.unclaimed.map((fee, idx) => (
+                              <div key={idx} className="ml-2">
+                                {fee.amountUSD} USD ({fee.amount} tokens)
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </li>
                     ))}
                   </ul>
@@ -841,6 +933,62 @@ export default function Sidebar() {
     }));
   };
 
+  const renderPosition = (position) => {
+    const isExpanded = expandedProtocols[position.protocol];
+    
+    return (
+      <div key={`${position.protocol}-${position.tokenType}`} className="mb-2">
+        <div 
+          className="flex items-center justify-between cursor-pointer p-2 hover:bg-gray-100 rounded"
+          onClick={() => toggleProtocol(position.protocol)}
+        >
+          <div className="flex items-center">
+            <span className="font-medium">{position.token}</span>
+            {position.isActive !== undefined && (
+              <span className={`ml-2 px-2 py-0.5 text-xs rounded ${position.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                {position.isActive ? 'Active' : 'Inactive'}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center">
+            <span className="mr-2">{position.amount.toFixed(4)}</span>
+            <ChevronDown size={20} className={`w-4 h-4 transform transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+          </div>
+        </div>
+        
+        {isExpanded && (
+          <div className="pl-4 mt-1 text-sm text-gray-600">
+            <div>Provider: {position.provider}</div>
+            {position.protocol === "Hyperion" && (
+              <>
+                {position.farm && (
+                  <div className="mt-1">
+                    <div className="font-medium">Farm Rewards:</div>
+                    {position.farm.unclaimed.map((reward, index) => (
+                      <div key={index} className="ml-2">
+                        {reward.amountUSD} USD ({reward.amount} tokens)
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {position.fees && (
+                  <div className="mt-1">
+                    <div className="font-medium">Unclaimed Fees:</div>
+                    {position.fees.unclaimed.map((fee, index) => (
+                      <div key={index} className="ml-2">
+                        {fee.amountUSD} USD ({fee.amount} tokens)
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <AptosWalletAdapterProvider
       optInWallets={['Petra']}
@@ -990,60 +1138,7 @@ export default function Sidebar() {
                   {/* Google Wallet Protocols */}
                   {positions.length > 0 && (
                     <div className="w-full mt-4 text-sm">
-                      {Object.entries(
-                        positions.reduce((acc, pos) => {
-                          if (!acc[pos.protocol]) {
-                            acc[pos.protocol] = [];
-                          }
-                          acc[pos.protocol].push(pos);
-                          return acc;
-                        }, {})
-                      ).map(([protocol, protocolPositions]) => (
-                        <div key={protocol} className="w-full mt-4 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-                          <div 
-                            onClick={() => toggleProtocol(protocol)}
-                            className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                          >
-                            <div className="flex items-center gap-2">
-                              <img 
-                                src={
-                                  protocol === "Joule" ? "https://app.joule.finance/favicon.ico" :
-                                  protocol === "Echelon" ? "https://echelon.market/favicon.ico" :
-                                  protocol === "Aries" ? "https://ariesmarkets.xyz/apple-touch-icon.png" :
-                                  protocol === "Hyperion" ? "https://hyperion.xyz/fav-new.svg" :
-                                  ""
-                                } 
-                                alt={protocol} 
-                                className="w-5 h-5"
-                              />
-                              <h3 className="text-lg font-semibold">{protocol}</h3>
-                            </div>
-                            {expandedProtocols[protocol] ? (
-                              <ChevronDown size={20} className="text-gray-500" />
-                            ) : (
-                              <ChevronRight size={20} className="text-gray-500" />
-                            )}
-                          </div>
-
-                          {expandedProtocols[protocol] && (
-                            <div className="p-3 bg-white dark:bg-gray-900">
-                              <ul className="space-y-2">
-                                {protocolPositions.map((pos, idx) => {
-                                  const tokenData = getTokenData(pos.tokenType || pos.token);
-                                  return (
-                                    <li key={idx} className="flex justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
-                                      <span>
-                                        {tokenData.assetName} {tokenData.provider && <span className="text-xs text-gray-500">({tokenData.provider})</span>}
-                                      </span>
-                                      <span className="font-bold">{pos.amount}</span>
-                                    </li>
-                                  );
-                                })}
-                              </ul>
-                            </div>
-                          )}
-                        </div>
-                      ))}
+                      {positions.map((pos) => renderPosition(pos))}
                     </div>
                   )}
 
