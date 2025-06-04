@@ -142,11 +142,19 @@ function AptosWalletAssetsBlock({ resetOnDisconnect }) {
           ) : (
             <ul className="space-y-2">
               {balances.map((b, index) => (
-                <li key={index} className="flex justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
-                  <span>
-                    {b.asset} {b.provider && <span className="text-xs text-gray-500">({b.provider})</span>}
-                  </span>
-                  <span className="font-bold">{b.balance}</span>
+                <li key={index} className="flex flex-col p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
+                  <div className="flex justify-between items-center">
+                    <span>
+                      {b.asset} {b.provider && <span className="text-xs text-gray-500">({b.provider})</span>}
+                    </span>
+                    <span className="font-bold">{b.balance}</span>
+                  </div>
+                  {b.price && (
+                    <div className="flex justify-between items-center mt-1 text-sm text-gray-500">
+                      <span>${parseFloat(b.price).toFixed(2)}</span>
+                      <span>${(parseFloat(b.balance) * parseFloat(b.price)).toFixed(2)}</span>
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>
@@ -860,11 +868,19 @@ export default function Sidebar() {
                         ) : (
                           <ul className="space-y-2">
                             {balances.map((b, index) => (
-                              <li key={index} className="flex justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
-                                <span>
-                                  {b.asset} {b.provider && <span className="text-xs text-gray-500">({b.provider})</span>}
-                                </span>
-                                <span className="font-bold">{b.balance}</span>
+                              <li key={index} className="flex flex-col p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
+                                <div className="flex justify-between items-center">
+                                  <span>
+                                    {b.asset} {b.provider && <span className="text-xs text-gray-500">({b.provider})</span>}
+                                  </span>
+                                  <span className="font-bold">{b.balance}</span>
+                                </div>
+                                {b.price && (
+                                  <div className="flex justify-between items-center mt-1 text-sm text-gray-500">
+                                    <span>${parseFloat(b.price).toFixed(2)}</span>
+                                    <span>${(parseFloat(b.balance) * parseFloat(b.price)).toFixed(2)}</span>
+                                  </div>
+                                )}
                               </li>
                             ))}
                           </ul>
