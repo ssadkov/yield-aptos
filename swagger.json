@@ -35,8 +35,8 @@
     "/api/aptos/balances": {
       "get": {
         "tags": ["aptos"],
-        "summary": "Get all token balances for a specific Aptos address",
-        "description": "Fetches balances for all tracked tokens associated with the given Aptos address.",
+        "summary": "Get all token balances and prices for a specific Aptos address",
+        "description": "Fetches balances and current prices for all tracked tokens associated with the given Aptos address.",
         "parameters": [
           {
             "name": "address",
@@ -50,7 +50,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Successful response with token balances",
+            "description": "Successful response with token balances and prices",
             "content": {
               "application/json": {
                 "example": {
@@ -59,13 +59,23 @@
                       "asset": "APT",
                       "provider": "Aptos",
                       "token": "0x1::aptos_coin::AptosCoin",
-                      "balance": 150.25
+                      "balance": 150.25,
+                      "price": "5.54399864",
+                      "nativePrice": "1",
+                      "name": "Aptos Coin",
+                      "symbol": "APT",
+                      "decimals": 8
                     },
                     {
                       "asset": "USDC",
                       "provider": "LayerZero USDC",
                       "token": "0xf22bede2::asset::USDC",
-                      "balance": 250.75
+                      "balance": 250.75,
+                      "price": "0.99995",
+                      "nativePrice": "0.18077031",
+                      "name": "USDC",
+                      "symbol": "USDC",
+                      "decimals": 6
                     }
                   ]
                 }
@@ -1279,6 +1289,75 @@
                   "success": false,
                   "error": "Failed to fetch Hyperion user positions",
                   "details": "Invalid address: {...}"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/aptos/panora_prices": {
+      "get": {
+        "tags": ["aptos"],
+        "summary": "Get token prices from Panora API",
+        "description": "Fetches real-time price data for tokens on the Aptos chain using Panora Price API. Returns prices for all tokens having liquidity above a nominal threshold.",
+        "parameters": [
+          {
+            "name": "tokenAddress",
+            "in": "query",
+            "required": false,
+            "description": "Comma-separated list of coin (legacy) and/or FA addresses. If not provided, returns prices of all tokens with sufficient liquidity.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "chainId",
+            "in": "query",
+            "required": false,
+            "description": "The chain ID associated with the token (Default: 1 for Aptos Mainnet)",
+            "schema": {
+              "type": "string",
+              "default": "1"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response with token prices",
+            "content": {
+              "application/json": {
+                "example": [
+                  {
+                    "chainId": 1,
+                    "tokenAddress": null,
+                    "faAddress": "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b",
+                    "name": "USDC",
+                    "symbol": "USDC",
+                    "decimals": 6,
+                    "usdPrice": "0.99995",
+                    "nativePrice": "0.18077031"
+                  },
+                  {
+                    "chainId": 1,
+                    "tokenAddress": "0x1::aptos_coin::AptosCoin",
+                    "faAddress": null,
+                    "name": "Aptos Coin",
+                    "symbol": "APT",
+                    "decimals": 8,
+                    "usdPrice": "5.54399864",
+                    "nativePrice": "1"
+                  }
+                ]
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "Internal server error"
                 }
               }
             }

@@ -18,6 +18,17 @@ export async function GET(req) {
     const balances = [];
     const positions = [];
 
+    // Получаем цены всех токенов одним запросом
+    const tokenAddresses = JOULE_TOKENS.map(token => token.token).join(',');
+    const pricesResponse = await fetch(`https://api.panora.exchange/prices?tokenAddress=${tokenAddresses}`, {
+      headers: {
+        'x-api-key': process.env.PANORA_API_KEY
+      }
+    });
+
+    const pricesData = await pricesResponse.json();
+    const pricesMap = new Map(pricesData.map(price => [price.tokenAddress || price.faAddress, price]));
+
     // Перебираем ВСЕ токены из JOULE_TOKENS и запрашиваем баланс по каждому
     for (const token of JOULE_TOKENS) {
       const tokenBalanceUrl = `${fullnodeUrl}/${token.token}`;
@@ -34,13 +45,18 @@ export async function GET(req) {
 
       const data = await response.json();
       const balance = parseFloat(data) / token.decimals;
-
+      
+      // Получаем цену токена
+      const priceData = pricesMap.get(token.token);
+      
       if (balance > 0) {
         balances.push({
           asset: token.assetName,
           provider: token.provider,
           token: token.token,
           balance: balance,
+          price: priceData?.usdPrice || null,
+          nativePrice: priceData?.nativePrice || null
         });
       }
     }
