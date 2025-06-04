@@ -581,11 +581,21 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
                   <img src="https://hyperion.xyz/fav-new.svg" alt="Hyperion" className="w-5 h-5" />
                   <h3 className="text-lg font-semibold">Hyperion</h3>
                 </div>
-                {expandedProtocols["Hyperion"] ? (
-                  <ChevronDown size={20} className="text-gray-500" />
-                ) : (
-                  <ChevronRight size={20} className="text-gray-500" />
-                )}
+                <div className="flex items-center gap-2">
+                  <span className="text-lg font-semibold text-gray-700 dark:text-gray-300">
+                    ${hyperionPositions.reduce((sum, pos) => {
+                      const positionValue = parseFloat(pos.amount);
+                      const farmRewards = pos.farm?.unclaimed?.reduce((rewardSum, reward) => rewardSum + parseFloat(reward.amountUSD), 0) || 0;
+                      const fees = pos.fees?.unclaimed?.reduce((feeSum, fee) => feeSum + parseFloat(fee.amountUSD), 0) || 0;
+                      return sum + positionValue + farmRewards + fees;
+                    }, 0).toFixed(2)}
+                  </span>
+                  {expandedProtocols["Hyperion"] ? (
+                    <ChevronDown size={20} className="text-gray-500" />
+                  ) : (
+                    <ChevronRight size={20} className="text-gray-500" />
+                  )}
+                </div>
               </div>
 
               {expandedProtocols["Hyperion"] && (
@@ -601,14 +611,14 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
                               </span>
                             )}
                           </span>
-                          <span className="font-bold">{pos.amount}</span>
+                          <span className="font-bold">${parseFloat(pos.amount).toFixed(2)}</span>
                         </div>
                         {pos.farm && pos.farm.unclaimed.length > 0 && (
                           <div className="mt-1 text-sm text-gray-600">
                             <div className="font-medium">Farm Rewards:</div>
                             {pos.farm.unclaimed.map((reward, idx) => (
                               <div key={idx} className="ml-2">
-                                {reward.amountUSD} USD ({reward.amount} tokens)
+                                ${parseFloat(reward.amountUSD).toFixed(2)}
                               </div>
                             ))}
                           </div>
@@ -618,7 +628,7 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
                             <div className="font-medium">Unclaimed Fees:</div>
                             {pos.fees.unclaimed.map((fee, idx) => (
                               <div key={idx} className="ml-2">
-                                {fee.amountUSD} USD ({fee.amount} tokens)
+                                ${parseFloat(fee.amountUSD).toFixed(2)}
                               </div>
                             ))}
                           </div>
