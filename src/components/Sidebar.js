@@ -260,6 +260,21 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
     return amount;
   };
 
+  const getTokenPriceFromPanora = async (coinAddress) => {
+    try {
+      const response = await fetch(`/api/aptos/panora_prices?tokenAddress=${coinAddress}`);
+      const data = await response.json();
+      // Find the matching token price in the response array
+      const tokenPrice = data.find(token => 
+        token.tokenAddress === coinAddress || token.faAddress === coinAddress
+      );
+      return tokenPrice?.usdPrice || 0;
+    } catch (error) {
+      console.error("❌ Error fetching token price from Panora:", error);
+      return 0;
+    }
+  };
+
   const fetchJoulePositions = async (address, apiKey) => {
     try {
       console.log('🔍 Запрашиваем Joule позиции для адреса:', address);
@@ -306,16 +321,22 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
       
       if (!dataEchelon?.userPositions?.length) return [];
       
-      return dataEchelon.userPositions.map((pos) => {
+      const positions = await Promise.all(dataEchelon.userPositions.map(async (pos) => {
         const tokenData = getTokenData(pos.coin);
+        const amount = formatAmount(pos.supply, tokenData.decimals);
+        const price = await getTokenPriceFromPanora(pos.coin);
         return {
           token: tokenData.assetName,
-          amount: formatAmount(pos.supply, tokenData.decimals),
+          amount: amount,
           provider: tokenData.provider,
           protocol: "Echelon",
-          tokenType: pos.coin
+          tokenType: pos.coin,
+          price: price,
+          valueUSD: (parseFloat(amount) * price).toFixed(2)
         };
-      });
+      }));
+
+      return positions;
     } catch (error) {
       console.error("❌ Error fetching Echelon positions:", error);
       return [];
@@ -509,11 +530,16 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
                   <img src="https://echelon.market/favicon.ico" alt="Echelon" className="w-5 h-5" />
                   <h3 className="text-lg font-semibold">Echelon</h3>
                 </div>
-                {expandedProtocols["Echelon"] ? (
-                  <ChevronDown size={20} className="text-gray-500" />
-                ) : (
-                  <ChevronRight size={20} className="text-gray-500" />
-                )}
+                <div className="flex items-center gap-2">
+                  <span className="text-lg font-semibold text-gray-700 dark:text-gray-300">
+                    ${echelonPositions.reduce((sum, pos) => sum + parseFloat(pos.valueUSD), 0).toFixed(2)}
+                  </span>
+                  {expandedProtocols["Echelon"] ? (
+                    <ChevronDown size={20} className="text-gray-500" />
+                  ) : (
+                    <ChevronRight size={20} className="text-gray-500" />
+                  )}
+                </div>
               </div>
 
               {expandedProtocols["Echelon"] && (
@@ -526,6 +552,10 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
                             {pos.token} {pos.provider && <span className="text-xs text-gray-500">({pos.provider})</span>}
                           </span>
                           <span className="font-bold">{pos.amount}</span>
+                        </div>
+                        <div className="flex justify-between items-center mt-1 text-sm text-gray-500">
+                          <span>${parseFloat(pos.price).toFixed(2)}</span>
+                          <span>${pos.valueUSD}</span>
                         </div>
                       </li>
                     ))}
