@@ -190,8 +190,7 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
   const [expandedProtocols, setExpandedProtocols] = useState({
     Joule: true,
     Echelon: true,
-    Aries: true,
-    Hyperion: true
+    Aries: true
   });
 
   useEffect(() => {
@@ -219,98 +218,188 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
     }));
   };
 
+  // Универсальная функция для получения данных токена
+  const getTokenData = (key) => {
+    console.log('🔍 Получаем данные токена для:', key);
+    const formattedKey = key.startsWith("@") ? key.replace("@", "0x") : key;
+    console.log('🔍 Форматированный ключ:', formattedKey);
+    
+    // Ищем токен в списке
+    const tokenData = JOULE_TOKENS.find((t) => {
+      const matches = t.token.toLowerCase() === formattedKey.toLowerCase();
+      if (matches) {
+        console.log('✅ Найден токен:', t);
+      }
+      return matches;
+    });
+    
+    if (!tokenData) {
+      console.log('⚠️ Токен не найден в JOULE_TOKENS, используем базовые данные');
+      return {
+        assetName: formattedKey.slice(0, 6) + "..." + formattedKey.slice(-6),
+        provider: "Unknown Provider",
+        decimals: 1e6,
+        token: formattedKey
+      };
+    }
+    
+    return {
+      assetName: tokenData.assetName,
+      provider: tokenData.provider || "Unknown Provider",
+      decimals: tokenData.decimals || 1e6,
+      token: formattedKey
+    };
+  };
+  
+  // Форматируем сумму токенов с учётом decimals
+  const formatAmount = (value, decimals) => {
+    console.log('💰 Форматируем сумму:', { value, decimals });
+    const amount = (parseFloat(value) / decimals).toFixed(2);
+    console.log('💰 Отформатированная сумма:', amount);
+    return amount;
+  };
+
+  const fetchJoulePositions = async (address, apiKey) => {
+    try {
+      console.log('🔍 Запрашиваем Joule позиции для адреса:', address);
+      const resJoule = await fetch(`/api/joule/userPositions?address=${address}`, {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'X-API-Key': apiKey
+        }
+      });
+      const dataJoule = await resJoule.json();
+      console.log('📊 Joule позиции (сырые):', dataJoule);
+      
+      if (!dataJoule?.userPositions?.length) return [];
+      
+      return dataJoule.userPositions[0].positions_map.data.flatMap((position) =>
+        position.value.lend_positions.data.map((pos) => {
+          const tokenData = getTokenData(pos.key);
+          return {
+            token: tokenData.assetName,
+            amount: formatAmount(pos.value, tokenData.decimals),
+            provider: tokenData.provider,
+            protocol: "Joule",
+            tokenType: pos.key
+          };
+        })
+      );
+    } catch (error) {
+      console.error("❌ Error fetching Joule positions:", error);
+      return [];
+    }
+  };
+  
+  const fetchEchelonPositions = async (address, apiKey) => {
+    try {
+      console.log('🔍 Запрашиваем Echelon позиции для адреса:', address);
+      const resEchelon = await fetch(`/api/echelon/userPositions?address=${address}`, {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'X-API-Key': apiKey
+        }
+      });
+      const dataEchelon = await resEchelon.json();
+      console.log('📊 Echelon позиции (сырые):', dataEchelon);
+      
+      if (!dataEchelon?.userPositions?.length) return [];
+      
+      return dataEchelon.userPositions.map((pos) => {
+        const tokenData = getTokenData(pos.coin);
+        return {
+          token: tokenData.assetName,
+          amount: formatAmount(pos.supply, tokenData.decimals),
+          provider: tokenData.provider,
+          protocol: "Echelon",
+          tokenType: pos.coin
+        };
+      });
+    } catch (error) {
+      console.error("❌ Error fetching Echelon positions:", error);
+      return [];
+    }
+  };
+  
+  const fetchAriesPositions = async (address, apiKey) => {
+    try {
+      console.log('🔍 Запрашиваем Aries позиции для адреса:', address);
+      const resAries = await fetch(`/api/aries/userPositions?address=${address}`, {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'X-API-Key': apiKey
+        }
+      });
+      const dataAries = await resAries.json();
+      console.log('📊 Aries позиции (сырые):', dataAries);
+      
+      if (!dataAries?.profiles?.profiles) return [];
+      
+      const positions = [];
+      for (const [profileName, profile] of Object.entries(dataAries.profiles.profiles)) {
+        const deposits = profile.deposits || {};
+        for (const [tokenAddress, depositData] of Object.entries(deposits)) {
+          if (parseFloat(depositData.collateral_coins) > 0) {
+            const tokenData = getTokenData(tokenAddress);
+            positions.push({
+              token: tokenData.assetName,
+              amount: formatAmount(depositData.collateral_coins, tokenData.decimals),
+              provider: tokenData.provider,
+              protocol: "Aries",
+              tokenType: tokenAddress
+            });
+          }
+        }
+      }
+      return positions;
+    } catch (error) {
+      console.error("❌ Error fetching Aries positions:", error);
+      return [];
+    }
+  };
+
   const fetchAptosPositions = async () => {
     if (!addressStr) return;
     setLoading(true);
     try {
-      // Joule
-      const resJoule = await fetch(`/api/joule/userPositions?address=${addressStr}`, {
-        headers: {
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_APTOS_API_KEY}`,
-          'X-API-Key': process.env.NEXT_PUBLIC_APTOS_API_KEY
-        }
-      });
-      const dataJoule = await resJoule.json();
-      let joulePositions = [];
-      if (dataJoule?.userPositions?.length > 0) {
-        joulePositions = dataJoule.userPositions[0].positions_map.data.flatMap((position) =>
-          position.value.lend_positions.data.map((pos) => {
-            const tokenData = getTokenData(pos.key);
-            return {
-              token: tokenData.assetName,
-              amount: formatAmount(pos.value, tokenData.decimals),
-              provider: tokenData.provider,
-              protocol: "Joule",
-              tokenType: pos.key,
-            };
-          })
-        );
+      console.log('🔄 Начинаем загрузку позиций для адреса:', addressStr);
+      
+      // Кэшируем результаты на 30 секунд
+      const cacheKey = `aptos_positions_${addressStr}`;
+      const cachedData = sessionStorage.getItem(cacheKey);
+      const cacheTime = sessionStorage.getItem(`${cacheKey}_time`);
+      
+      if (cachedData && cacheTime && Date.now() - parseInt(cacheTime) < 30000) {
+        const data = JSON.parse(cachedData);
+        setPositions(data);
+        toast.success("Aptos positions loaded from cache!");
+        return;
       }
-      // Echelon
-      const resEchelon = await fetch(`/api/echelon/userPositions?address=${addressStr}`, {
-        headers: {
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_APTOS_API_KEY}`,
-          'X-API-Key': process.env.NEXT_PUBLIC_APTOS_API_KEY
-        }
-      });
-      const dataEchelon = await resEchelon.json();
-      let echelonPositions = [];
-      if (dataEchelon?.userPositions?.length > 0) {
-        echelonPositions = dataEchelon.userPositions.map((pos) => {
-          const tokenData = getTokenData(pos.coin);
-          return {
-            token: tokenData.assetName,
-            amount: formatAmount(pos.supply, tokenData.decimals),
-            provider: tokenData.provider,
-            protocol: "Echelon",
-            tokenType: pos.coin,
-          };
-        });
+
+      // Получаем API ключи
+      const apiKey = process.env.NEXT_PUBLIC_APTOS_API_KEY;
+      if (!apiKey) {
+        console.error('❌ API ключ не найден');
+        toast.error('API key not found');
+        return;
       }
-      // Aries
-      const resAries = await fetch(`/api/aries/userPositions?address=${addressStr}`, {
-        headers: {
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_APTOS_API_KEY}`,
-          'X-API-Key': process.env.NEXT_PUBLIC_APTOS_API_KEY
-        }
-      });
-      const dataAries = await resAries.json();
-      let ariesPositions = [];
-      if (dataAries?.profiles?.profiles) {
-        for (const [profileName, profile] of Object.entries(dataAries.profiles.profiles)) {
-          const deposits = profile.deposits || {};
-          for (const [tokenAddress, depositData] of Object.entries(deposits)) {
-            if (parseFloat(depositData.collateral_coins) > 0) {
-              ariesPositions.push({
-                token: tokenAddress,
-                amount: depositData.collateral_coins,
-                protocol: "Aries",
-              });
-            }
-          }
-        }
-      }
-      // Hyperion
-      const resHyperion = await fetch(`/api/hyperion/userPositions?address=${addressStr}`, {
-        headers: {
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_APTOS_API_KEY}`,
-          'X-API-Key': process.env.NEXT_PUBLIC_APTOS_API_KEY
-        }
-      });
-      const dataHyperion = await resHyperion.json();
-      let hyperionPositions = [];
-      if (dataHyperion?.success && dataHyperion?.data?.length > 0) {
-        hyperionPositions = dataHyperion.data.map((pos) => ({
-          token0: pos.position.pool.token1Info.symbol,
-          token1: pos.position.pool.token2Info.symbol,
-          amountUSD: pos.value,
-          protocol: "Hyperion",
-        }));
-      }
-      setPositions([...joulePositions, ...echelonPositions, ...ariesPositions, ...hyperionPositions]);
+
+      // Запрашиваем позиции последовательно с API ключами
+      const joulePositions = await fetchJoulePositions(addressStr, apiKey);
+      const echelonPositions = await fetchEchelonPositions(addressStr, apiKey);
+      const ariesPositions = await fetchAriesPositions(addressStr, apiKey);
+      
+      const allPositions = [...joulePositions, ...echelonPositions, ...ariesPositions];
+      console.log('📊 Все позиции:', allPositions);
+      
+      // Сохраняем в кэш
+      sessionStorage.setItem(cacheKey, JSON.stringify(allPositions));
+      sessionStorage.setItem(`${cacheKey}_time`, Date.now().toString());
+      
+      setPositions(allPositions);
       toast.success("Aptos positions updated!");
     } catch (error) {
-      console.error("Error loading positions:", error);
+      console.error("❌ Error loading positions:", error);
       toast.error("Error loading Aptos positions");
     } finally {
       setLoading(false);
@@ -322,126 +411,184 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
   const joulePositions = positions.filter((p) => p.protocol === "Joule" && parseFloat(p.amount) > 0);
   const echelonPositions = positions.filter((p) => p.protocol === "Echelon" && parseFloat(p.amount) > 0);
   const ariesPositions = positions.filter((p) => p.protocol === "Aries" && parseFloat(p.amount) > 0);
-  const hyperionPositions = positions.filter((p) => p.protocol === "Hyperion" && parseFloat(p.amountUSD) > 0);
-
-  function getTokenData(key) {
-    const formattedKey = key.startsWith("@") ? key.replace("@", "0x") : key;
-    const tokenData = JOULE_TOKENS.find((t) => t.token === formattedKey) || {};
-    return {
-      assetName: tokenData.assetName || formattedKey.slice(0, 6) + "..." + formattedKey.slice(-6),
-      provider: tokenData.provider || "Unknown Provider",
-      decimals: tokenData.decimals || 1e6,
-    };
-  }
-
-  function formatAmount(value, decimals) {
-    return (parseFloat(value) / decimals).toFixed(2);
-  }
-
-  const ProtocolBlock = ({ protocol, positions, icon, formatPosition }) => {
-    if (positions.length === 0) return null;
-
-    return (
-      <div className="w-full mt-4 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-        <div 
-          onClick={() => toggleProtocol(protocol)}
-          className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-        >
-          <div className="flex items-center gap-2">
-            <img src={icon} alt={protocol} className="w-5 h-5" />
-            <h3 className="text-lg font-semibold">{protocol}</h3>
-          </div>
-          {expandedProtocols[protocol] ? (
-            <ChevronDown size={20} className="text-gray-500" />
-          ) : (
-            <ChevronRight size={20} className="text-gray-500" />
-          )}
-        </div>
-
-        {expandedProtocols[protocol] && (
-          <div className="p-3 bg-white dark:bg-gray-900">
-            <ul className="space-y-2">
-              {positions.map((pos, index) => (
-                <li key={index} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
-                  {formatPosition(pos)}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </div>
-    );
-  };
 
   return (
     <div className="w-full mt-4 text-sm">
-      {joulePositions.length === 0 && echelonPositions.length === 0 && ariesPositions.length === 0 && hyperionPositions.length === 0 ? (
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold">Positions</h3>
+        <button 
+          onClick={fetchAptosPositions}
+          className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+          disabled={loading}
+        >
+          <RefreshCw size={18} className={`${loading ? 'animate-spin' : ''}`} />
+        </button>
+      </div>
+
+      {loading ? (
+        <p className="text-sm text-gray-500">Loading positions...</p>
+      ) : joulePositions.length === 0 && echelonPositions.length === 0 && ariesPositions.length === 0 ? (
         <p className="text-sm text-red-500">No positions found. Click refresh to load.</p>
       ) : (
         <>
-          <ProtocolBlock
-            protocol="Joule"
-            positions={joulePositions}
-            icon="https://app.joule.finance/favicon.ico"
-            formatPosition={(pos) => (
-              <>
-                <span className="text-left">
-                  {pos.token} {pos.provider && <span className="text-xs text-gray-500">({pos.provider})</span>}
-                </span>
-                <span className="font-bold text-right flex-1">{pos.amount}</span>
-              </>
-            )}
-          />
+          {joulePositions.length > 0 && (
+            <div className="w-full mt-4 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+              <div 
+                onClick={() => toggleProtocol("Joule")}
+                className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <img src="https://app.joule.finance/favicon.ico" alt="Joule" className="w-5 h-5" />
+                  <h3 className="text-lg font-semibold">Joule</h3>
+                </div>
+                {expandedProtocols["Joule"] ? (
+                  <ChevronDown size={20} className="text-gray-500" />
+                ) : (
+                  <ChevronRight size={20} className="text-gray-500" />
+                )}
+              </div>
 
-          <ProtocolBlock
-            protocol="Echelon"
-            positions={echelonPositions}
-            icon="https://echelon.market/favicon.ico"
-            formatPosition={(pos) => (
-              <>
-                <span className="text-left">
-                  {pos.token} {pos.provider && <span className="text-xs text-gray-500">({pos.provider})</span>}
-                </span>
-                <span className="font-bold text-right flex-1">{pos.amount}</span>
-              </>
-            )}
-          />
+              {expandedProtocols["Joule"] && (
+                <div className="p-3 bg-white dark:bg-gray-900">
+                  <ul className="space-y-2">
+                    {joulePositions.map((pos, index) => (
+                      <li key={index} className="flex flex-col p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
+                        <div className="flex justify-between items-center">
+                          <span>
+                            {pos.token} {pos.provider && <span className="text-xs text-gray-500">({pos.provider})</span>}
+                          </span>
+                          <span className="font-bold">{pos.amount}</span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
 
-          <ProtocolBlock
-            protocol="Aries"
-            positions={ariesPositions}
-            icon="https://ariesmarkets.xyz/apple-touch-icon.png"
-            formatPosition={(pos) => {
-              const tokenData = getTokenData(pos.token);
-              return (
-                <>
-                  <span className="text-left">
-                    {tokenData.assetName} {tokenData.provider && <span className="text-xs text-gray-500">({tokenData.provider})</span>}
-                  </span>
-                  <span className="font-bold text-right flex-1">{formatAmount(pos.amount, tokenData.decimals)}</span>
-                </>
-              );
-            }}
-          />
+          {echelonPositions.length > 0 && (
+            <div className="w-full mt-4 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+              <div 
+                onClick={() => toggleProtocol("Echelon")}
+                className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <img src="https://echelon.market/favicon.ico" alt="Echelon" className="w-5 h-5" />
+                  <h3 className="text-lg font-semibold">Echelon</h3>
+                </div>
+                {expandedProtocols["Echelon"] ? (
+                  <ChevronDown size={20} className="text-gray-500" />
+                ) : (
+                  <ChevronRight size={20} className="text-gray-500" />
+                )}
+              </div>
 
-          <ProtocolBlock
-            protocol="Hyperion"
-            positions={hyperionPositions}
-            icon="https://hyperion.xyz/fav-new.svg"
-            formatPosition={(pos) => (
-              <>
-                <span className="text-left">
-                  {pos.token0}/{pos.token1}
-                </span>
-                <span className="font-bold text-right flex-1">${parseFloat(pos.amountUSD).toFixed(2)}</span>
-              </>
-            )}
-          />
+              {expandedProtocols["Echelon"] && (
+                <div className="p-3 bg-white dark:bg-gray-900">
+                  <ul className="space-y-2">
+                    {echelonPositions.map((pos, index) => (
+                      <li key={index} className="flex flex-col p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
+                        <div className="flex justify-between items-center">
+                          <span>
+                            {pos.token} {pos.provider && <span className="text-xs text-gray-500">({pos.provider})</span>}
+                          </span>
+                          <span className="font-bold">{pos.amount}</span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
+          {ariesPositions.length > 0 && (
+            <div className="w-full mt-4 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+              <div 
+                onClick={() => toggleProtocol("Aries")}
+                className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <img src="https://ariesmarkets.xyz/apple-touch-icon.png" alt="Aries" className="w-5 h-5" />
+                  <h3 className="text-lg font-semibold">Aries</h3>
+                </div>
+                {expandedProtocols["Aries"] ? (
+                  <ChevronDown size={20} className="text-gray-500" />
+                ) : (
+                  <ChevronRight size={20} className="text-gray-500" />
+                )}
+              </div>
+
+              {expandedProtocols["Aries"] && (
+                <div className="p-3 bg-white dark:bg-gray-900">
+                  <ul className="space-y-2">
+                    {ariesPositions.map((pos, index) => (
+                      <li key={index} className="flex flex-col p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
+                        <div className="flex justify-between items-center">
+                          <span>
+                            {pos.token} {pos.provider && <span className="text-xs text-gray-500">({pos.provider})</span>}
+                          </span>
+                          <span className="font-bold">{pos.amount}</span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
         </>
       )}
     </div>
   );
 }
+
+const ProtocolBlock = ({ protocol, positions, icon }) => {
+  if (positions.length === 0) return null;
+
+  return (
+    <div className="w-full mt-4 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+      <div 
+        onClick={() => toggleProtocol(protocol)}
+        className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <img src={icon} alt={protocol} className="w-5 h-5" />
+          <h3 className="text-lg font-semibold">{protocol}</h3>
+        </div>
+        {expandedProtocols[protocol] ? (
+          <ChevronDown size={20} className="text-gray-500" />
+        ) : (
+          <ChevronRight size={20} className="text-gray-500" />
+        )}
+      </div>
+
+      {expandedProtocols[protocol] && (
+        <div className="p-3 bg-white dark:bg-gray-900">
+          <ul className="space-y-2">
+            {positions.map((pos, index) => (
+              <li key={index} className="flex flex-col p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
+                <div className="flex justify-between items-center">
+                  <span>
+                    {pos.token} {pos.provider && <span className="text-xs text-gray-500">({pos.provider})</span>}
+                  </span>
+                  <span className="font-bold">{pos.amount}</span>
+                </div>
+                {pos.price && (
+                  <div className="flex justify-between items-center mt-1 text-sm text-gray-500">
+                    <span>${parseFloat(pos.price).toFixed(2)}</span>
+                    <span>${(parseFloat(pos.amount) * parseFloat(pos.price)).toFixed(2)}</span>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default function Sidebar() {
   const { session, status } = useSessionData();
@@ -563,6 +710,9 @@ export default function Sidebar() {
       }
 
       const res = await fetch(`/api/aptos/balances?address=${address}`);
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
       const data = await res.json();
       
       // Сохраняем в кэш
@@ -597,11 +747,12 @@ export default function Sidebar() {
         return data;
       }
 
-      // Запрашиваем данные последовательно, а не параллельно
+      // Запрашиваем данные последовательно
       const joulePositions = await fetchJoulePositions(address);
       const echelonPositions = await fetchEchelonPositions(address);
+      const ariesPositions = await fetchAriesPositions(address);
       
-      const positions = [...joulePositions, ...echelonPositions];
+      const positions = [...joulePositions, ...echelonPositions, ...ariesPositions];
       
       // Сохраняем в кэш
       sessionStorage.setItem(cacheKey, JSON.stringify(positions));
@@ -614,72 +765,6 @@ export default function Sidebar() {
       return [];
     }
   };
-
-  const fetchJoulePositions = async (address) => {
-    try {
-      const resJoule = await fetch(`/api/joule/userPositions?address=${address}`);
-      const dataJoule = await resJoule.json();
-      
-      if (!dataJoule?.userPositions?.length) return [];
-      
-      return dataJoule.userPositions[0].positions_map.data.flatMap((position) =>
-        position.value.lend_positions.data.map((pos) => {
-          const tokenData = getTokenData(pos.key);
-          return {
-            token: tokenData.assetName,
-            amount: formatAmount(pos.value, tokenData.decimals),
-            provider: tokenData.provider,
-            protocol: "Joule",
-            tokenType: pos.key,
-          };
-        })
-      );
-    } catch (error) {
-      console.error("❌ Error fetching Joule positions:", error);
-      return [];
-    }
-  };
-  
-  const fetchEchelonPositions = async (address) => {
-    try {
-      console.log(`🔄 Fetching Echelon positions for ${address}`);
-      const res = await fetch(`/api/echelon/userPositions?address=${address}`);
-      const data = await res.json();
-  
-      if (!data?.userPositions?.length) return [];
-  
-      return data.userPositions.map((pos) => {
-        const tokenData = getTokenData(pos.coin);
-        return {
-          token: tokenData.assetName,
-          amount: formatAmount(pos.supply, tokenData.decimals),
-          provider: tokenData.provider,
-          protocol: "Echelon",
-          tokenType: pos.coin,
-        };
-      });
-    } catch (error) {
-      console.error("❌ Error fetching Echelon positions:", error);
-      return [];
-    }
-  };
-  
-  // Универсальная функция для получения данных токена (работает и для Joule, и для Echelon)
-  const getTokenData = (key) => {
-    const formattedKey = key.startsWith("@") ? key.replace("@", "0x") : key;
-    const tokenData = JOULE_TOKENS.find((t) => t.token === formattedKey) || {};
-  
-    return {
-      assetName: tokenData.assetName || formattedKey.slice(0, 6) + "..." + formattedKey.slice(-6),
-      provider: tokenData.provider || "Unknown Provider",
-      decimals: tokenData.decimals || 1e6, // По умолчанию 1e6, если не найдено в JOULE_TOKENS
-    };
-  };
-  
-  // Форматируем сумму токенов с учётом decimals
-  const formatAmount = (value, decimals) => (parseFloat(value) / decimals).toFixed(2);
-  
-  
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(aptosAddress);
@@ -795,18 +880,28 @@ export default function Sidebar() {
                             {formatAddress(aptosAddress)}
                           </span>
                         </div>
-                        <button 
-                          onClick={() => {
-                            localStorage.removeItem("aptosWalletAddress");
-                            localStorage.removeItem("userEmail");
-                            localStorage.removeItem("userId");
-                            signOut();
-                          }}                  
-                          className="p-1 rounded-md bg-white/10 hover:bg-white/20 transition-colors"
-                          title="Sign out"
-                        >
-                          <LogOut size={18} className="text-white" />
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button 
+                            onClick={() => fetchBalances(aptosAddress)} 
+                            className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+                            title="Refresh Wallet"
+                            disabled={loading}
+                          >
+                            <RefreshCw size={18} className={`text-white ${loading ? 'animate-spin' : ''}`} />
+                          </button>
+                          <button 
+                            onClick={() => {
+                              localStorage.removeItem("aptosWalletAddress");
+                              localStorage.removeItem("userEmail");
+                              localStorage.removeItem("userId");
+                              signOut();
+                            }}                  
+                            className="p-1 rounded-md bg-white/10 hover:bg-white/20 transition-colors"
+                            title="Sign out"
+                          >
+                            <LogOut size={18} className="text-white" />
+                          </button>
+                        </div>
                       </div>
                       <div className="flex space-x-2">
                         <button 
@@ -836,14 +931,6 @@ export default function Sidebar() {
                         >
                           <Globe size={18} className="text-white" />
                         </a>
-                        <button 
-                          onClick={fetchBalances} 
-                          className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
-                          title="Refresh Wallet"
-                          disabled={loading}
-                        >
-                          <RefreshCw size={18} className={`text-white ${loading ? 'animate-spin' : ''}`} />
-                        </button>
                       </div>
                       <div className="text-white/80 text-sm mt-2">Google Yield Wallet Connected</div>
                       <div className="text-white/60 text-xs mt-1">{session.user.email}</div>
