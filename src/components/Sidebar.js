@@ -17,6 +17,7 @@ import { Network } from '@aptos-labs/ts-sdk';
 
 function AptosWalletBlock({ onDisconnect }) {
   const { account, connect, disconnect, connected } = useWallet();
+  const [loading, setLoading] = useState(false);
 
   const addressStr = account?.address
     ? typeof account.address === "string"
@@ -38,6 +39,20 @@ function AptosWalletBlock({ onDisconnect }) {
     }
   };
 
+  const fetchAptosBalances = async () => {
+    if (!addressStr) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/aptos/balances?address=${addressStr}`);
+      const data = await res.json();
+      toast.success("Aptos assets updated!");
+    } catch (error) {
+      toast.error("Error loading Aptos balances");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!connected) {
     return (
       <Button onClick={handleConnect} className="w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white shadow-md" variant="secondary">
@@ -52,13 +67,22 @@ function AptosWalletBlock({ onDisconnect }) {
         <span className="truncate text-sm text-white font-medium">
           {addressStr ? `${addressStr.slice(0, 8)}...${addressStr.slice(-6)}` : ""}
         </span>
-        <button
-          onClick={handleDisconnect}
-          className="p-1 rounded-md bg-white/10 hover:bg-white/20 transition-colors"
-          title="Disconnect"
-        >
-          <LogOut size={18} className="text-white" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={fetchAptosBalances}
+            className="p-1 rounded-md bg-white/10 hover:bg-white/20 transition-colors"
+            disabled={loading}
+          >
+            <RefreshCw size={18} className={`text-white ${loading ? 'animate-spin' : ''}`} />
+          </button>
+          <button
+            onClick={handleDisconnect}
+            className="p-1 rounded-md bg-white/10 hover:bg-white/20 transition-colors"
+            title="Disconnect"
+          >
+            <LogOut size={18} className="text-white" />
+          </button>
+        </div>
       </div>
       <div className="text-xs text-white/80 mt-2">Aptos Wallet Connected</div>
     </div>
@@ -96,7 +120,6 @@ function AptosWalletAssetsBlock({ resetOnDisconnect }) {
       const res = await fetch(`/api/aptos/balances?address=${addressStr}`);
       const data = await res.json();
       setBalances(data.balances || []);
-      toast.success("Aptos assets updated!");
     } catch (error) {
       toast.error("Error loading Aptos balances");
     } finally {
@@ -105,6 +128,8 @@ function AptosWalletAssetsBlock({ resetOnDisconnect }) {
   };
 
   if (!connected) return null;
+
+  const totalValue = balances.reduce((sum, b) => sum + (parseFloat(b.balance) * parseFloat(b.price || 0)), 0);
 
   return (
     <div className="w-full mt-4 text-sm border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
@@ -117,16 +142,9 @@ function AptosWalletAssetsBlock({ resetOnDisconnect }) {
           <h3 className="text-lg font-semibold">Assets</h3>
         </div>
         <div className="flex items-center gap-2">
-          <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              fetchAptosBalances();
-            }} 
-            className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded"
-            disabled={loading}
-          >
-            <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
-          </button>
+          <span className="text-lg font-semibold text-gray-700 dark:text-gray-300">
+            ${totalValue.toFixed(2)}
+          </span>
           {isExpanded ? (
             <ChevronDown size={20} className="text-gray-500" />
           ) : (
@@ -843,16 +861,9 @@ export default function Sidebar() {
                         <h3 className="text-lg font-semibold">Assets</h3>
                       </div>
                       <div className="flex items-center gap-2">
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            fetchBalances();
-                          }} 
-                          className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded"
-                          disabled={loading}
-                        >
-                          <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
-                        </button>
+                        <span className="text-lg font-semibold text-gray-700 dark:text-gray-300">
+                          ${balances.reduce((sum, b) => sum + (parseFloat(b.balance) * parseFloat(b.price || 0)), 0).toFixed(2)}
+                        </span>
                         {isExpanded ? (
                           <ChevronDown size={20} className="text-gray-500" />
                         ) : (
