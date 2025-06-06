@@ -646,22 +646,18 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
                         </div>
                         {pos.farm && pos.farm.unclaimed.length > 0 && (
                           <div className="mt-1 text-sm text-gray-600">
-                            <div className="font-medium">Farm Rewards:</div>
-                            {pos.farm.unclaimed.map((reward, idx) => (
-                              <div key={idx} className="ml-2">
-                                ${parseFloat(reward.amountUSD).toFixed(2)}
-                              </div>
-                            ))}
+                            <div className="flex justify-between items-center">
+                              <span className="font-medium">Farm Rewards:</span>
+                              <span>${pos.farm.unclaimed.reduce((sum, reward) => sum + parseFloat(reward.amountUSD), 0).toFixed(2)}</span>
+                            </div>
                           </div>
                         )}
                         {pos.fees && pos.fees.unclaimed.length > 0 && (
                           <div className="mt-1 text-sm text-gray-600">
-                            <div className="font-medium">Unclaimed Fees:</div>
-                            {pos.fees.unclaimed.map((fee, idx) => (
-                              <div key={idx} className="ml-2">
-                                ${parseFloat(fee.amountUSD).toFixed(2)}
-                              </div>
-                            ))}
+                            <div className="flex justify-between items-center">
+                              <span className="font-medium">Unclaimed Fees:</span>
+                              <span>${pos.fees.unclaimed.reduce((sum, fee) => sum + parseFloat(fee.amountUSD), 0).toFixed(2)}</span>
+                            </div>
                           </div>
                         )}
                       </li>
