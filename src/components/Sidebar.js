@@ -475,11 +475,13 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
       const joulePositions = await fetchJoulePositions(addressStr, apiKey);
       const echelonPositions = await fetchEchelonPositions(addressStr, apiKey);
       const ariesPositions = await fetchAriesPositions(addressStr, apiKey);
+      const hyperionPositions = await fetchHyperionPositions(addressStr);
       
       console.log('📊 Позиции до добавления цен:', {
         joule: joulePositions,
         echelon: echelonPositions,
-        aries: ariesPositions
+        aries: ariesPositions,
+        hyperion: hyperionPositions
       });
       
       // Добавляем цены к позициям
@@ -493,6 +495,10 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
           price: pricesMap.get(pos.token)?.usdPrice || 0
         })),
         ...ariesPositions.map(pos => ({
+          ...pos,
+          price: pricesMap.get(pos.token)?.usdPrice || 0
+        })),
+        ...hyperionPositions.map(pos => ({
           ...pos,
           price: pricesMap.get(pos.token)?.usdPrice || 0
         }))
