@@ -49,6 +49,13 @@ function AptosWalletBlock({ onDisconnect }) {
     }
   };
 
+  const copyToClipboard = () => {
+    if (addressStr) {
+      navigator.clipboard.writeText(addressStr);
+      toast.success("Address copied to clipboard!");
+    }
+  };
+
   const fetchAptosBalances = async () => {
     if (!addressStr) return;
     setLoading(true);
@@ -76,9 +83,36 @@ function AptosWalletBlock({ onDisconnect }) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Wallet className="h-5 w-5 text-white" />
-          <span className="text-base text-white font-medium">
-            {addressStr ? `${addressStr.slice(0, 8)}...${addressStr.slice(-6)}` : ""}
+          <span className="text-lg text-white font-medium">
+            {addressStr ? `${addressStr.slice(0, 5)}...${addressStr.slice(-4)}` : ""}
           </span>
+          <button 
+            onClick={copyToClipboard} 
+            className="p-1 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+            title="Copy Address"
+          >
+            <Copy size={18} className="text-white" />
+          </button>
+          <button
+            onClick={() => {
+              if (window.confirm("Are you sure you want to view your mnemonic phrase? Make sure no one else is watching your screen.")) {
+                toast(`Mnemonic: ${mnemonic}`);
+              }
+            }}
+            className="p-1 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+            title="Show Mnemonic"
+          >
+            <Eye size={18} className="text-white" />
+          </button>
+          <a
+            href={`https://explorer.aptoslabs.com/account/${addressStr}?network=mainnet`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-1 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+            title="View on Explorer"
+          >
+            <Globe size={18} className="text-white" />
+          </a>
         </div>
         <div className="flex items-center gap-2">
           <button 
@@ -731,6 +765,13 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
                             </div>
                           </div>
                         )}
+                        {pos.protocol === "Hyperion" && (
+                          <div className="flex justify-between items-center mt-1 text-sm">
+                            <span className={pos.isActive ? "text-green-500" : "text-red-500"}>
+                              {pos.isActive ? "Active" : "Inactive"}
+                            </span>
+                          </div>
+                        )}
                       </li>
                     ))}
                   </ul>
@@ -1124,6 +1165,13 @@ export default function Sidebar() {
                       <span>${(parseFloat(pos.amount) * parseFloat(pos.price)).toFixed(2)}</span>
                     </div>
                   )}
+                  {pos.protocol === "Hyperion" && (
+                    <div className="flex justify-between items-center mt-1 text-sm">
+                      <span className={pos.isActive ? "text-green-500" : "text-red-500"}>
+                        {pos.isActive ? "Active" : "Inactive"}
+                      </span>
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>
@@ -1159,7 +1207,7 @@ export default function Sidebar() {
         >
           <Card className="w-[90%] bg-white dark:bg-gray-800 text-foreground shadow-md mt-16 lg:mt-12 mb-12 h-auto overflow-y-auto">
             <CardContent className="p-6 flex flex-col items-center">
-              <h2 className="text-xl font-bold text-center mb-4">Yield-AI Wallet</h2>
+              <h2 className="text-xl font-bold text-center mb-1">Yield-AI Wallet</h2>
 
               {session ? (
                 <div className="w-full text-center">
@@ -1168,14 +1216,41 @@ export default function Sidebar() {
                       <div className="flex items-center justify-between w-full mb-2">
                         <div className="flex items-center gap-2">
                           <Wallet className="h-5 w-5 text-white" />
-                          <span className="text-white font-medium text-lg">
+                          <span className="text-lg text-white font-medium">
                             {formatAddress(aptosAddress)}
                           </span>
+                          <button 
+                            onClick={copyToClipboard} 
+                            className="p-1 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+                            title="Copy Address"
+                          >
+                            <Copy size={18} className="text-white" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (window.confirm("Are you sure you want to view your mnemonic phrase? Make sure no one else is watching your screen.")) {
+                                toast(`Mnemonic: ${mnemonic}`);
+                              }
+                            }}
+                            className="p-1 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+                            title="Show Mnemonic"
+                          >
+                            <Eye size={18} className="text-white" />
+                          </button>
+                          <a
+                            href={`https://explorer.aptoslabs.com/account/${aptosAddress}?network=mainnet`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+                            title="View on Explorer"
+                          >
+                            <Globe size={18} className="text-white" />
+                          </a>
                         </div>
                         <div className="flex items-center gap-2">
                           <button 
                             onClick={() => fetchBalances(aptosAddress)} 
-                            className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+                            className="p-1 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
                             title="Refresh Wallet"
                             disabled={loading}
                           >
@@ -1195,37 +1270,8 @@ export default function Sidebar() {
                           </button>
                         </div>
                       </div>
-                      <div className="flex space-x-2">
-                        <button 
-                          onClick={copyToClipboard} 
-                          className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
-                          title="Copy Address"
-                        >
-                          <Copy size={18} className="text-white" />
-                        </button>
-                        <button
-                          onClick={() => {
-                            if (window.confirm("Are you sure you want to view your mnemonic phrase? Make sure no one else is watching your screen.")) {
-                              toast(`Mnemonic: ${mnemonic}`);
-                            }
-                          }}
-                          className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
-                          title="Show Mnemonic"
-                        >
-                          <Eye size={18} className="text-white" />
-                        </button>
-                        <a
-                          href={`https://explorer.aptoslabs.com/account/${aptosAddress}?network=mainnet`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
-                          title="View on Explorer"
-                        >
-                          <Globe size={18} className="text-white" />
-                        </a>
-                      </div>
                       <div className="text-white/80 text-sm mt-2">Google Yield Wallet Connected</div>
-                       <div className="text-white/60 text-xs mt-1">{session.user.email}</div>
+                      <div className="text-white/60 text-xs mt-1">{session.user.email}</div>
                     </div>
                   </div>
 
@@ -1330,6 +1376,13 @@ export default function Sidebar() {
                                         <div className="flex justify-between items-center mt-1 text-sm text-gray-500">
                                           <span>${parseFloat(pos.price).toFixed(2)}</span>
                                           <span>${(parseFloat(pos.amount) * parseFloat(pos.price)).toFixed(2)}</span>
+                                        </div>
+                                      )}
+                                      {pos.protocol === "Hyperion" && (
+                                        <div className="flex justify-between items-center mt-1 text-sm">
+                                          <span className={pos.isActive ? "text-green-500" : "text-red-500"}>
+                                            {pos.isActive ? "Active" : "Inactive"}
+                                          </span>
                                         </div>
                                       )}
                                     </li>
