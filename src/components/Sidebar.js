@@ -14,6 +14,7 @@ import {
   useWallet,
 } from '@aptos-labs/wallet-adapter-react';
 import { Network } from '@aptos-labs/ts-sdk';
+import PROTOCOL_ICONS from '../app/api/aptos/markets/protocolIcons';
 
 function AptosWalletBlock({ onDisconnect }) {
   const { account, connect, disconnect, connected } = useWallet();
@@ -491,7 +492,7 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
                 className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               >
                 <div className="flex items-center gap-2">
-                  <img src="https://app.joule.finance/favicon.ico" alt="Joule" className="w-5 h-5" />
+                  <img src={PROTOCOL_ICONS["Joule"]} alt="Joule" className="w-5 h-5" />
                   <h3 className="text-lg font-semibold">Joule</h3>
                 </div>
                 {expandedProtocols["Joule"] ? (
@@ -527,7 +528,7 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
                 className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               >
                 <div className="flex items-center gap-2">
-                  <img src="https://echelon.market/favicon.ico" alt="Echelon" className="w-5 h-5" />
+                  <img src={PROTOCOL_ICONS["Echelon"]} alt="Echelon" className="w-5 h-5" />
                   <h3 className="text-lg font-semibold">Echelon</h3>
                 </div>
                 <div className="flex items-center gap-2">
@@ -572,7 +573,7 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
                 className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               >
                 <div className="flex items-center gap-2">
-                  <img src="https://ariesmarkets.xyz/apple-touch-icon.png" alt="Aries" className="w-5 h-5" />
+                  <img src={PROTOCOL_ICONS["Aries"]} alt="Aries" className="w-5 h-5" />
                   <h3 className="text-lg font-semibold">Aries</h3>
                 </div>
                 {expandedProtocols["Aries"] ? (
@@ -608,7 +609,7 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
                 className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               >
                 <div className="flex items-center gap-2">
-                  <img src="https://hyperion.xyz/fav-new.svg" alt="Hyperion" className="w-5 h-5" />
+                  <img src={PROTOCOL_ICONS["Hyperion"]} alt="Hyperion" className="w-5 h-5" />
                   <h3 className="text-lg font-semibold">Hyperion</h3>
                 </div>
                 <div className="flex items-center gap-2">
@@ -686,7 +687,7 @@ const ProtocolBlock = ({ protocol, positions, icon }) => {
         className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
       >
         <div className="flex items-center gap-2">
-          <img src={icon} alt={protocol} className="w-5 h-5" />
+          <img src={PROTOCOL_ICONS[protocol]} alt={protocol} className="w-5 h-5" />
           <h3 className="text-lg font-semibold">{protocol}</h3>
         </div>
         {expandedProtocols[protocol] ? (
@@ -833,7 +834,7 @@ export default function Sidebar() {
       const cachedData = sessionStorage.getItem(cacheKey);
       const cacheTime = sessionStorage.getItem(`${cacheKey}_time`);
       
-      if (cachedData && cacheTime && Date.now() - parseInt(cacheTime) < 30000) {
+      if (cachedData && cacheTime && Date.now() - parseInt(cacheTime) < 300) {
         const data = JSON.parse(cachedData);
         setBalances(data.balances || []);
         setPositions(data.positions || []);
@@ -974,55 +975,58 @@ export default function Sidebar() {
   };
 
   const renderPosition = (position) => {
-    const isExpanded = expandedProtocols[position.protocol];
-    
+    const protocolPositions = positions.filter(p => p.protocol === position.protocol);
+    const totalValue = protocolPositions.reduce((sum, pos) => {
+      const positionValue = parseFloat(pos.amount) * (parseFloat(pos.price) || 0);
+      return sum + positionValue;
+    }, 0);
+
     return (
-      <div key={`${position.protocol}-${position.tokenType}`} className="mb-2">
+      <div className="w-full mt-4 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
         <div 
-          className="flex items-center justify-between cursor-pointer p-2 hover:bg-gray-100 rounded"
           onClick={() => toggleProtocol(position.protocol)}
+          className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
         >
-          <div className="flex items-center">
-            <span className="font-medium">{position.token}</span>
-            {position.isActive !== undefined && (
-              <span className={`ml-2 px-2 py-0.5 text-xs rounded ${position.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                {position.isActive ? 'Active' : 'Inactive'}
-              </span>
-            )}
+          <div className="flex items-center gap-2">
+            <img 
+              src={PROTOCOL_ICONS[position.protocol]} 
+              alt={position.protocol} 
+              className="w-5 h-5"
+            />
+            <h3 className="text-lg font-semibold">{position.protocol}</h3>
           </div>
-          <div className="flex items-center">
-            <span className="mr-2">{position.amount.toFixed(4)}</span>
-            <ChevronDown size={20} className={`w-4 h-4 transform transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+          <div className="flex items-center gap-2">
+            <span className="text-lg font-semibold text-gray-700 dark:text-gray-300">
+              ${totalValue.toFixed(2)}
+            </span>
+            {expandedProtocols[position.protocol] ? (
+              <ChevronDown size={20} className="text-gray-500" />
+            ) : (
+              <ChevronRight size={20} className="text-gray-500" />
+            )}
           </div>
         </div>
-        
-        {isExpanded && (
-          <div className="pl-4 mt-1 text-sm text-gray-600">
-            <div>Provider: {position.provider}</div>
-            {position.protocol === "Hyperion" && (
-              <>
-                {position.farm && (
-                  <div className="mt-1">
-                    <div className="font-medium">Farm Rewards:</div>
-                    {position.farm.unclaimed.map((reward, index) => (
-                      <div key={index} className="ml-2">
-                        {reward.amountUSD} USD ({reward.amount} tokens)
-                      </div>
-                    ))}
+
+        {expandedProtocols[position.protocol] && (
+          <div className="p-3 bg-white dark:bg-gray-900">
+            <ul className="space-y-2">
+              {protocolPositions.map((pos, index) => (
+                <li key={index} className="flex flex-col p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
+                  <div className="flex justify-between items-center">
+                    <span>
+                      {pos.token} {pos.provider && <span className="text-xs text-gray-500">({pos.provider})</span>}
+                    </span>
+                    <span className="font-bold">{pos.amount}</span>
                   </div>
-                )}
-                {position.fees && (
-                  <div className="mt-1">
-                    <div className="font-medium">Unclaimed Fees:</div>
-                    {position.fees.unclaimed.map((fee, index) => (
-                      <div key={index} className="ml-2">
-                        {fee.amountUSD} USD ({fee.amount} tokens)
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
+                  {pos.price && (
+                    <div className="flex justify-between items-center mt-1 text-sm text-gray-500">
+                      <span>${parseFloat(pos.price).toFixed(2)}</span>
+                      <span>${(parseFloat(pos.amount) * parseFloat(pos.price)).toFixed(2)}</span>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
           </div>
         )}
       </div>
@@ -1121,7 +1125,7 @@ export default function Sidebar() {
                         </a>
                       </div>
                       <div className="text-white/80 text-sm mt-2">Google Yield Wallet Connected</div>
-                      <div className="text-white/60 text-xs mt-1">{session.user.email}</div>
+                       <div className="text-white/60 text-xs mt-1">{session.user.email}</div>
                     </div>
                   </div>
 
@@ -1178,7 +1182,64 @@ export default function Sidebar() {
                   {/* Google Wallet Protocols */}
                   {positions.length > 0 && (
                     <div className="w-full mt-4 text-sm">
-                      {positions.map((pos) => renderPosition(pos))}
+                      {Array.from(new Set(positions.map(p => p.protocol))).map(protocol => {
+                        const protocolPositions = positions.filter(p => p.protocol === protocol);
+                        const totalValue = protocolPositions.reduce((sum, pos) => {
+                          const positionValue = parseFloat(pos.amount) * (parseFloat(pos.price) || 0);
+                          return sum + positionValue;
+                        }, 0);
+
+                        return (
+                          <div key={protocol} className="w-full mt-4 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                            <div 
+                              onClick={() => toggleProtocol(protocol)}
+                              className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                            >
+                              <div className="flex items-center gap-2">
+                                <img 
+                                  src={PROTOCOL_ICONS[protocol]} 
+                                  alt={protocol} 
+                                  className="w-5 h-5"
+                                />
+                                <h3 className="text-lg font-semibold">{protocol}</h3>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-lg font-semibold text-gray-700 dark:text-gray-300">
+                                  ${totalValue.toFixed(2)}
+                                </span>
+                                {expandedProtocols[protocol] ? (
+                                  <ChevronDown size={20} className="text-gray-500" />
+                                ) : (
+                                  <ChevronRight size={20} className="text-gray-500" />
+                                )}
+                              </div>
+                            </div>
+
+                            {expandedProtocols[protocol] && (
+                              <div className="p-3 bg-white dark:bg-gray-900">
+                                <ul className="space-y-2">
+                                  {protocolPositions.map((pos, index) => (
+                                    <li key={index} className="flex flex-col p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
+                                      <div className="flex justify-between items-center">
+                                        <span>
+                                          {pos.token} {pos.provider && <span className="text-xs text-gray-500">({pos.provider})</span>}
+                                        </span>
+                                        <span className="font-bold">{pos.amount}</span>
+                                      </div>
+                                      {pos.price && (
+                                        <div className="flex justify-between items-center mt-1 text-sm text-gray-500">
+                                          <span>${parseFloat(pos.price).toFixed(2)}</span>
+                                          <span>${(parseFloat(pos.amount) * parseFloat(pos.price)).toFixed(2)}</span>
+                                        </div>
+                                      )}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
 

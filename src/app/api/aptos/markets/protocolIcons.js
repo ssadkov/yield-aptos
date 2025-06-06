@@ -4,7 +4,7 @@ const PROTOCOL_ICONS = {
     "PanoraSwap": "https://panora.exchange/assets/favicons/favicon.ico",
     "Aptos": "https://explorer.aptoslabs.com/favicon.ico",
     "Aries": "https://ariesmarkets.xyz/favicon-32x32.png",
-    "Hyperion": "https://hyperion.xyz/favicon.ico",
+    "Hyperion": "https://hyperion.xyz/fav-new.svg",
   };
   
   export default PROTOCOL_ICONS;
