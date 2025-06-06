@@ -379,7 +379,8 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
         const tokenData = getTokenData(pos.coin);
         const amount = formatAmount(pos.supply, tokenData.decimals);
         const price = await getTokenPriceFromPanora(pos.coin);
-        return {
+        console.log('💰 Цена для токена', pos.coin, ':', price);
+        const position = {
           token: tokenData.assetName,
           amount: amount,
           provider: tokenData.provider,
@@ -388,6 +389,8 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
           price: price,
           valueUSD: (parseFloat(amount) * price).toFixed(2)
         };
+        console.log('📊 Сформированная позиция:', position);
+        return position;
       }));
 
       return positions;
@@ -489,22 +492,6 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
         return;
       }
 
-      // Получаем цены всех токенов одним запросом
-      const tokenAddresses = JOULE_TOKENS.map(token => token.token).join(',');
-      console.log('🔍 Запрашиваем цены для токенов:', tokenAddresses);
-      const pricesResponse = await fetch(`https://api.panora.exchange/prices?tokenAddress=${tokenAddresses}`, {
-        headers: {
-          'x-api-key': process.env.PANORA_API_KEY
-        }
-      });
-      const pricesData = await pricesResponse.json();
-      console.log('📊 Получены цены:', pricesData);
-      
-      // Проверяем, что pricesData это массив
-      const pricesArray = Array.isArray(pricesData) ? pricesData : pricesData.data || [];
-      const pricesMap = new Map(pricesArray.map(price => [price.tokenAddress || price.faAddress, price]));
-      console.log('🗺️ Map с ценами:', Object.fromEntries(pricesMap));
-
       // Запрашиваем данные последовательно
       const joulePositions = await fetchJoulePositions(addressStr, apiKey);
       const echelonPositions = await fetchEchelonPositions(addressStr, apiKey);
@@ -518,24 +505,12 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
         hyperion: hyperionPositions
       });
       
-      // Добавляем цены к позициям
+      // Используем уже полученные цены из позиций
       const positions = [
-        ...joulePositions.map(pos => ({
-          ...pos,
-          price: pricesMap.get(pos.token)?.usdPrice || 0
-        })),
-        ...echelonPositions.map(pos => ({
-          ...pos,
-          price: pricesMap.get(pos.token)?.usdPrice || 0
-        })),
-        ...ariesPositions.map(pos => ({
-          ...pos,
-          price: pricesMap.get(pos.token)?.usdPrice || 0
-        })),
-        ...hyperionPositions.map(pos => ({
-          ...pos,
-          price: pricesMap.get(pos.token)?.usdPrice || 0
-        }))
+        ...joulePositions,
+        ...echelonPositions,
+        ...ariesPositions,
+        ...hyperionPositions
       ];
       
       console.log('📊 Позиции после добавления цен:', positions);
@@ -655,9 +630,9 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
                           </span>
                           <span className="font-bold">{pos.amount}</span>
                         </div>
-                        {pos.price && (
+                        {pos.valueUSD && (
                           <div className="flex justify-between items-center mt-1 text-sm text-gray-500">
-                            <span>${parseFloat(pos.price).toFixed(2)}</span>
+                            <span>${parseFloat(pos.price || 0).toFixed(2)}</span>
                             <span>${pos.valueUSD}</span>
                           </div>
                         )}
