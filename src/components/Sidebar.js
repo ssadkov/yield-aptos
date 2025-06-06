@@ -277,10 +277,17 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
     try {
       const response = await fetch(`/api/aptos/panora_prices?tokenAddress=${coinAddress}`);
       const data = await response.json();
+      console.log('📊 Panora prices response:', data);
+      
       // Find the matching token price in the response array
-      const tokenPrice = data.find(token => 
-        token.tokenAddress === coinAddress || token.faAddress === coinAddress
-      );
+      const tokenPrice = data.find(token => {
+        const tokenAddr = token.tokenAddress?.toLowerCase();
+        const faAddr = token.faAddress?.toLowerCase();
+        const coinAddr = coinAddress.toLowerCase();
+        return tokenAddr === coinAddr || faAddr === coinAddr;
+      });
+      
+      console.log('💰 Found token price:', tokenPrice);
       return tokenPrice?.usdPrice || 0;
     } catch (error) {
       console.error("❌ Error fetching token price from Panora:", error);
@@ -448,20 +455,56 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
         return;
       }
 
-      // Запрашиваем позиции последовательно с API ключами
+      // Получаем цены всех токенов одним запросом
+      const tokenAddresses = JOULE_TOKENS.map(token => token.token).join(',');
+      console.log('🔍 Запрашиваем цены для токенов:', tokenAddresses);
+      const pricesResponse = await fetch(`https://api.panora.exchange/prices?tokenAddress=${tokenAddresses}`, {
+        headers: {
+          'x-api-key': process.env.PANORA_API_KEY
+        }
+      });
+      const pricesData = await pricesResponse.json();
+      console.log('📊 Получены цены:', pricesData);
+      
+      // Проверяем, что pricesData это массив
+      const pricesArray = Array.isArray(pricesData) ? pricesData : pricesData.data || [];
+      const pricesMap = new Map(pricesArray.map(price => [price.tokenAddress || price.faAddress, price]));
+      console.log('🗺️ Map с ценами:', Object.fromEntries(pricesMap));
+
+      // Запрашиваем данные последовательно
       const joulePositions = await fetchJoulePositions(addressStr, apiKey);
       const echelonPositions = await fetchEchelonPositions(addressStr, apiKey);
       const ariesPositions = await fetchAriesPositions(addressStr, apiKey);
-      const hyperionPositions = await fetchHyperionPositions(addressStr);
       
-      const allPositions = [...joulePositions, ...echelonPositions, ...ariesPositions, ...hyperionPositions];
-      console.log('📊 Все позиции:', allPositions);
+      console.log('📊 Позиции до добавления цен:', {
+        joule: joulePositions,
+        echelon: echelonPositions,
+        aries: ariesPositions
+      });
+      
+      // Добавляем цены к позициям
+      const positions = [
+        ...joulePositions.map(pos => ({
+          ...pos,
+          price: pricesMap.get(pos.token)?.usdPrice || 0
+        })),
+        ...echelonPositions.map(pos => ({
+          ...pos,
+          price: pricesMap.get(pos.token)?.usdPrice || 0
+        })),
+        ...ariesPositions.map(pos => ({
+          ...pos,
+          price: pricesMap.get(pos.token)?.usdPrice || 0
+        }))
+      ];
+      
+      console.log('📊 Позиции после добавления цен:', positions);
       
       // Сохраняем в кэш
-      sessionStorage.setItem(cacheKey, JSON.stringify(allPositions));
+      sessionStorage.setItem(cacheKey, JSON.stringify(positions));
       sessionStorage.setItem(`${cacheKey}_time`, Date.now().toString());
       
-      setPositions(allPositions);
+      setPositions(positions);
       toast.success("Aptos positions updated!");
     } catch (error) {
       console.error("❌ Error loading positions:", error);
@@ -525,6 +568,12 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
                           </span>
                           <span className="font-bold">{pos.amount}</span>
                         </div>
+                        {pos.price && (
+                          <div className="flex justify-between items-center mt-1 text-sm text-gray-500">
+                            <span>${parseFloat(pos.price).toFixed(2)}</span>
+                            <span>${(parseFloat(pos.amount) * parseFloat(pos.price)).toFixed(2)}</span>
+                          </div>
+                        )}
                       </li>
                     ))}
                   </ul>
@@ -566,10 +615,12 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
                           </span>
                           <span className="font-bold">{pos.amount}</span>
                         </div>
-                        <div className="flex justify-between items-center mt-1 text-sm text-gray-500">
-                          <span>${parseFloat(pos.price).toFixed(2)}</span>
-                          <span>${pos.valueUSD}</span>
-                        </div>
+                        {pos.price && (
+                          <div className="flex justify-between items-center mt-1 text-sm text-gray-500">
+                            <span>${parseFloat(pos.price).toFixed(2)}</span>
+                            <span>${pos.valueUSD}</span>
+                          </div>
+                        )}
                       </li>
                     ))}
                   </ul>
@@ -606,6 +657,12 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
                           </span>
                           <span className="font-bold">{pos.amount}</span>
                         </div>
+                        {pos.price && (
+                          <div className="flex justify-between items-center mt-1 text-sm text-gray-500">
+                            <span>${parseFloat(pos.price).toFixed(2)}</span>
+                            <span>${(parseFloat(pos.amount) * parseFloat(pos.price)).toFixed(2)}</span>
+                          </div>
+                        )}
                       </li>
                     ))}
                   </ul>
@@ -884,12 +941,45 @@ export default function Sidebar() {
         return data;
       }
 
+      // Получаем цены всех токенов одним запросом
+      const tokenAddresses = JOULE_TOKENS.map(token => token.token).join(',');
+      const pricesResponse = await fetch(`https://api.panora.exchange/prices?tokenAddress=${tokenAddresses}`, {
+        headers: {
+          'x-api-key': process.env.PANORA_API_KEY
+        }
+      });
+      const pricesData = await pricesResponse.json();
+      const pricesMap = new Map(pricesData.map(price => [price.tokenAddress || price.faAddress, price]));
+      console.log('🗺️ Map с ценами:', Object.fromEntries(pricesMap));
+
       // Запрашиваем данные последовательно
       const joulePositions = await fetchJoulePositions(address);
       const echelonPositions = await fetchEchelonPositions(address);
       const ariesPositions = await fetchAriesPositions(address);
       
-      const positions = [...joulePositions, ...echelonPositions, ...ariesPositions];
+      console.log('📊 Позиции до добавления цен:', {
+        joule: joulePositions,
+        echelon: echelonPositions,
+        aries: ariesPositions
+      });
+      
+      // Добавляем цены к позициям
+      const positions = [
+        ...joulePositions.map(pos => ({
+          ...pos,
+          price: pricesMap.get(pos.token)?.usdPrice || 0
+        })),
+        ...echelonPositions.map(pos => ({
+          ...pos,
+          price: pricesMap.get(pos.token)?.usdPrice || 0
+        })),
+        ...ariesPositions.map(pos => ({
+          ...pos,
+          price: pricesMap.get(pos.token)?.usdPrice || 0
+        }))
+      ];
+      
+      console.log('📊 Позиции после добавления цен:', positions);
       
       // Сохраняем в кэш
       sessionStorage.setItem(cacheKey, JSON.stringify(positions));

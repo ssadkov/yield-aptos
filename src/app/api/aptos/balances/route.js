@@ -82,7 +82,8 @@ export async function GET(req) {
             supplyApr: position.supplyApr,
             position_id: "",
             asset: tokenInfo ? tokenInfo.assetName : "Unknown",
-            provider: tokenInfo ? tokenInfo.provider : "Unknown"
+            provider: tokenInfo ? tokenInfo.provider : "Unknown",
+            price: pricesMap.get(position.coin)?.usdPrice || 0
           });
         }
       } else {
@@ -120,7 +121,8 @@ export async function GET(req) {
                 supplyApr: "",
                 position_id: profile.id,
                 asset: tokenInfo ? tokenInfo.assetName : "Unknown",
-                provider: tokenInfo ? tokenInfo.provider : "Unknown"
+                provider: tokenInfo ? tokenInfo.provider : "Unknown",
+                price: pricesMap.get(tokenAddress)?.usdPrice || 0
               });
             }
           }
@@ -159,7 +161,8 @@ export async function GET(req) {
                   supplyApr: "",
                   position_id: positionId,
                   asset: tokenInfo ? tokenInfo.assetName : "Unknown",
-                  provider: tokenInfo ? tokenInfo.provider : "Unknown"
+                  provider: tokenInfo ? tokenInfo.provider : "Unknown",
+                  price: pricesMap.get(tokenAddress)?.usdPrice || 0
                 });
               }
             }
