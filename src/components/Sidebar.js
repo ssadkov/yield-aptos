@@ -16,6 +16,15 @@ import {
 import { Network } from '@aptos-labs/ts-sdk';
 import PROTOCOL_ICONS from '../app/api/aptos/markets/protocolIcons';
 
+// Функция для форматирования адреса токена
+const formatTokenAddress = (address) => {
+  const tokenData = JOULE_TOKENS.find(t => t.token === address);
+  if (tokenData) {
+    return `${tokenData.assetName} (${tokenData.provider})`;
+  }
+  return address;
+};
+
 function AptosWalletBlock({ onDisconnect }) {
   const { account, connect, disconnect, connected } = useWallet();
   const [loading, setLoading] = useState(false);
@@ -65,9 +74,12 @@ function AptosWalletBlock({ onDisconnect }) {
   return (
     <div className="w-full text-center p-3 rounded-lg bg-gradient-to-r from-purple-500 to-purple-600 shadow-md">
       <div className="flex items-center justify-between">
-        <span className="truncate text-sm text-white font-medium">
-          {addressStr ? `${addressStr.slice(0, 8)}...${addressStr.slice(-6)}` : ""}
-        </span>
+        <div className="flex items-center gap-2">
+          <Wallet className="h-5 w-5 text-white" />
+          <span className="text-base text-white font-medium">
+            {addressStr ? `${addressStr.slice(0, 8)}...${addressStr.slice(-6)}` : ""}
+          </span>
+        </div>
         <div className="flex items-center gap-2">
           <button 
             onClick={fetchAptosBalances}
@@ -160,18 +172,18 @@ function AptosWalletAssetsBlock({ resetOnDisconnect }) {
             <p className="text-sm text-red-500">Top up your wallet to start earning passive income</p>
           ) : (
             <ul className="space-y-2">
-              {balances.map((b, index) => (
-                <li key={index} className="flex flex-col p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
+              {balances.map((balance, idx) => (
+                <li key={idx} className="flex flex-col p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
                   <div className="flex justify-between items-center">
                     <span>
-                      {b.asset} {b.provider && <span className="text-xs text-gray-500">({b.provider})</span>}
+                      {formatTokenAddress(balance.token)}
                     </span>
-                    <span className="font-bold">{b.balance}</span>
+                    <span className="font-bold">{balance.balance}</span>
                   </div>
-                  {b.price && (
+                  {balance.price && (
                     <div className="flex justify-between items-center mt-1 text-sm text-gray-500">
-                      <span>${parseFloat(b.price).toFixed(2)}</span>
-                      <span>${(parseFloat(b.balance) * parseFloat(b.price)).toFixed(2)}</span>
+                      <span>${parseFloat(balance.price).toFixed(2)}</span>
+                      <span>${(parseFloat(balance.balance) * parseFloat(balance.price)).toFixed(2)}</span>
                     </div>
                   )}
                 </li>
@@ -509,7 +521,7 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
                       <li key={index} className="flex flex-col p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
                         <div className="flex justify-between items-center">
                           <span>
-                            {pos.token} {pos.provider && <span className="text-xs text-gray-500">({pos.provider})</span>}
+                            {formatTokenAddress(pos.token)}
                           </span>
                           <span className="font-bold">{pos.amount}</span>
                         </div>
@@ -550,7 +562,7 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
                       <li key={index} className="flex flex-col p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
                         <div className="flex justify-between items-center">
                           <span>
-                            {pos.token} {pos.provider && <span className="text-xs text-gray-500">({pos.provider})</span>}
+                            {formatTokenAddress(pos.token)}
                           </span>
                           <span className="font-bold">{pos.amount}</span>
                         </div>
@@ -590,7 +602,7 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
                       <li key={index} className="flex flex-col p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
                         <div className="flex justify-between items-center">
                           <span>
-                            {pos.token} {pos.provider && <span className="text-xs text-gray-500">({pos.provider})</span>}
+                            {formatTokenAddress(pos.token)}
                           </span>
                           <span className="font-bold">{pos.amount}</span>
                         </div>
@@ -636,11 +648,7 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
                       <li key={index} className="flex flex-col p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
                         <div className="flex justify-between items-center">
                           <span>
-                            {pos.token} {pos.isActive !== undefined && (
-                              <span className={`ml-2 px-2 py-0.5 text-xs rounded ${pos.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                                {pos.isActive ? 'Active' : 'Inactive'}
-                              </span>
-                            )}
+                            {formatTokenAddress(pos.token)}
                           </span>
                           <span className="font-bold">${parseFloat(pos.amount).toFixed(2)}</span>
                         </div>
@@ -700,7 +708,7 @@ const ProtocolBlock = ({ protocol, positions, icon }) => {
               <li key={index} className="flex flex-col p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
                 <div className="flex justify-between items-center">
                   <span>
-                    {pos.token} {pos.provider && <span className="text-xs text-gray-500">({pos.provider})</span>}
+                    {formatTokenAddress(pos.token)}
                   </span>
                   <span className="font-bold">{pos.amount}</span>
                 </div>
@@ -1010,7 +1018,7 @@ export default function Sidebar() {
                 <li key={index} className="flex flex-col p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
                   <div className="flex justify-between items-center">
                     <span>
-                      {pos.token} {pos.provider && <span className="text-xs text-gray-500">({pos.provider})</span>}
+                      {formatTokenAddress(pos.token)}
                     </span>
                     <span className="font-bold">{pos.amount}</span>
                   </div>
@@ -1153,18 +1161,18 @@ export default function Sidebar() {
                           <p className="text-sm text-red-500">Top up your wallet to start earning passive income</p>
                         ) : (
                           <ul className="space-y-2">
-                            {balances.map((b, index) => (
-                              <li key={index} className="flex flex-col p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
+                            {balances.map((balance, idx) => (
+                              <li key={idx} className="flex flex-col p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
                                 <div className="flex justify-between items-center">
                                   <span>
-                                    {b.asset} {b.provider && <span className="text-xs text-gray-500">({b.provider})</span>}
+                                    {formatTokenAddress(balance.token)}
                                   </span>
-                                  <span className="font-bold">{b.balance}</span>
+                                  <span className="font-bold">{balance.balance}</span>
                                 </div>
-                                {b.price && (
+                                {balance.price && (
                                   <div className="flex justify-between items-center mt-1 text-sm text-gray-500">
-                                    <span>${parseFloat(b.price).toFixed(2)}</span>
-                                    <span>${(parseFloat(b.balance) * parseFloat(b.price)).toFixed(2)}</span>
+                                    <span>${parseFloat(balance.price).toFixed(2)}</span>
+                                    <span>${(parseFloat(balance.balance) * parseFloat(balance.price)).toFixed(2)}</span>
                                   </div>
                                 )}
                               </li>
@@ -1218,7 +1226,7 @@ export default function Sidebar() {
                                     <li key={index} className="flex flex-col p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
                                       <div className="flex justify-between items-center">
                                         <span>
-                                          {pos.token} {pos.provider && <span className="text-xs text-gray-500">({pos.provider})</span>}
+                                          {formatTokenAddress(pos.token)}
                                         </span>
                                         <span className="font-bold">{pos.amount}</span>
                                       </div>
