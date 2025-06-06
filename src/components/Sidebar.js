@@ -240,10 +240,12 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
     Aries: true,
     Hyperion: true
   });
+  const [ariesTotalValue, setAriesTotalValue] = useState(0);
 
   useEffect(() => {
     if (!connected && resetOnDisconnect) {
       setPositions([]);
+      setAriesTotalValue(0);
     }
   }, [connected, resetOnDisconnect]);
 
@@ -343,18 +345,70 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
       
       if (!dataJoule?.userPositions?.length) return [];
       
-      return dataJoule.userPositions[0].positions_map.data.flatMap((position) =>
-        position.value.lend_positions.data.map((pos) => {
-          const tokenData = getTokenData(pos.key);
+      const positions = await Promise.all(dataJoule.userPositions[0].positions_map.data.flatMap(async (position) => {
+        return Promise.all(position.value.lend_positions.data.map(async (pos) => {
+          // Получаем данные токена через Panora API
+          const response = await fetch(`/api/aptos/panora_prices?tokenAddress=${pos.key}`);
+          const data = await response.json();
+          console.log('📊 Panora prices response для', pos.key, ':', data);
+          
+          // Нормализуем адреса для сравнения
+          const normalizeAddress = (addr) => {
+            if (!addr) return '';
+            return addr.toLowerCase()
+              .replace('0x0000000000000000000000000000000000000000000000000000000000000001', '0x1')
+              .replace(/::/g, '::');
+          };
+          
+          // Ищем токен, проверяя оба адреса
+          const tokenInfo = data.find(token => {
+            const tokenAddr = normalizeAddress(token.tokenAddress);
+            const faAddr = normalizeAddress(token.faAddress);
+            const coinAddr = normalizeAddress(pos.key);
+            console.log('🔍 Сравниваем адреса:', {
+              tokenAddr,
+              faAddr,
+              coinAddr,
+              matches: tokenAddr === coinAddr || faAddr === coinAddr
+            });
+            return tokenAddr === coinAddr || faAddr === coinAddr;
+          });
+
+          // Если токен не найден в Panora, используем базовые данные
+          const tokenData = tokenInfo ? {
+            assetName: `${tokenInfo.symbol} (${tokenInfo.name})`,
+            provider: "Joule",
+            decimals: Math.pow(10, tokenInfo.decimals),
+            token: pos.key
+          } : {
+            assetName: pos.key.slice(0, 6) + "..." + pos.key.slice(-6),
+            provider: "Unknown Provider",
+            decimals: 1e6,
+            token: pos.key
+          };
+          
+          const amount = formatAmount(pos.value, tokenData.decimals);
+          const price = tokenInfo?.usdPrice || 0;
+          
+          // Если цена 0, используем фиксированные цены для известных токенов
+          const finalPrice = price || (tokenData.assetName === 'USDC' ? 1 : 
+                                     tokenData.assetName === 'APT' ? 4.62 : 0);
+          
+          console.log('💰 Итоговая цена для токена', pos.key, ':', finalPrice);
+          
           return {
             token: tokenData.assetName,
-            amount: formatAmount(pos.value, tokenData.decimals),
+            amount: amount,
             provider: tokenData.provider,
             protocol: "Joule",
-            tokenType: pos.key
+            tokenType: pos.key,
+            price: finalPrice,
+            valueUSD: (parseFloat(amount) * finalPrice).toFixed(2)
           };
-        })
-      );
+        }));
+      }));
+
+      return positions.flat();
     } catch (error) {
       console.error("❌ Error fetching Joule positions:", error);
       return [];
@@ -412,28 +466,83 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
       const dataAries = await resAries.json();
       console.log('📊 Aries позиции (сырые):', dataAries);
       
-      if (!dataAries?.profiles?.profiles) return [];
+      if (!dataAries?.profiles?.profiles) return { positions: [], totalValue: 0 };
       
       const positions = [];
       for (const [profileName, profile] of Object.entries(dataAries.profiles.profiles)) {
         const deposits = profile.deposits || {};
         for (const [tokenAddress, depositData] of Object.entries(deposits)) {
           if (parseFloat(depositData.collateral_coins) > 0) {
-            const tokenData = getTokenData(tokenAddress);
-            positions.push({
+            // Получаем данные токена через Panora API
+            const response = await fetch(`/api/aptos/panora_prices?tokenAddress=${tokenAddress}`);
+            const data = await response.json();
+            console.log('📊 Panora prices response для', tokenAddress, ':', data);
+            
+            // Нормализуем адреса для сравнения
+            const normalizeAddress = (addr) => {
+              if (!addr) return '';
+              return addr.toLowerCase()
+                .replace('0x0000000000000000000000000000000000000000000000000000000000000001', '0x1')
+                .replace(/::/g, '::');
+            };
+            
+            // Ищем токен, проверяя оба адреса
+            const tokenInfo = data.find(token => {
+              const tokenAddr = normalizeAddress(token.tokenAddress);
+              const faAddr = normalizeAddress(token.faAddress);
+              const coinAddr = normalizeAddress(tokenAddress);
+              console.log('🔍 Сравниваем адреса:', {
+                tokenAddr,
+                faAddr,
+                coinAddr,
+                matches: tokenAddr === coinAddr || faAddr === coinAddr
+              });
+              return tokenAddr === coinAddr || faAddr === coinAddr;
+            });
+
+            // Если токен не найден в Panora, используем базовые данные
+            const tokenData = tokenInfo ? {
+              assetName: tokenInfo.name,
+              provider: "Aries",
+              decimals: Math.pow(10, tokenInfo.decimals),
+              token: tokenAddress
+            } : {
+              assetName: tokenAddress.slice(0, 6) + "..." + tokenAddress.slice(-6),
+              provider: "Unknown Provider",
+              decimals: 1e6,
+              token: tokenAddress
+            };
+            
+            const amount = formatAmount(depositData.collateral_coins, tokenData.decimals);
+            const price = tokenInfo?.usdPrice || 0;
+            
+            // Если цена 0, используем фиксированные цены для известных токенов
+            const finalPrice = price || (tokenData.assetName === 'USDC' ? 1 : 
+                                       tokenData.assetName === 'APT' ? 4.62 : 0);
+            
+            console.log('💰 Итоговая цена для токена', tokenAddress, ':', finalPrice);
+            
+            const position = {
               token: tokenData.assetName,
-              amount: formatAmount(depositData.collateral_coins, tokenData.decimals),
+              amount: amount,
               provider: tokenData.provider,
               protocol: "Aries",
-              tokenType: tokenAddress
-            });
+              tokenType: tokenAddress,
+              price: finalPrice,
+              valueUSD: (parseFloat(amount) * finalPrice).toFixed(2)
+            };
+            console.log('📊 Сформированная позиция:', position);
+            positions.push(position);
           }
         }
       }
-      return positions;
+      return { 
+        positions, 
+        totalValue: dataAries.profiles.total_equity || 0 
+      };
     } catch (error) {
       console.error("❌ Error fetching Aries positions:", error);
-      return [];
+      return { positions: [], totalValue: 0 };
     }
   };
 
@@ -479,7 +588,8 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
       
       if (cachedData && cacheTime && Date.now() - parseInt(cacheTime) < 30000) {
         const data = JSON.parse(cachedData);
-        setPositions(data);
+        setPositions(data.positions);
+        setAriesTotalValue(data.ariesTotalValue || 0);
         toast.success("Aptos positions loaded from cache!");
         return;
       }
@@ -495,31 +605,36 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
       // Запрашиваем данные последовательно
       const joulePositions = await fetchJoulePositions(addressStr, apiKey);
       const echelonPositions = await fetchEchelonPositions(addressStr, apiKey);
-      const ariesPositions = await fetchAriesPositions(addressStr, apiKey);
+      const ariesData = await fetchAriesPositions(addressStr, apiKey);
       const hyperionPositions = await fetchHyperionPositions(addressStr);
       
       console.log('📊 Позиции до добавления цен:', {
         joule: joulePositions,
         echelon: echelonPositions,
-        aries: ariesPositions,
+        aries: ariesData.positions,
         hyperion: hyperionPositions
       });
       
       // Используем уже полученные цены из позиций
-      const positions = [
+      const allPositions = [
         ...joulePositions,
         ...echelonPositions,
-        ...ariesPositions,
+        ...ariesData.positions,
         ...hyperionPositions
       ];
       
-      console.log('📊 Позиции после добавления цен:', positions);
+      console.log('📊 Позиции после добавления цен:', allPositions);
       
       // Сохраняем в кэш
-      sessionStorage.setItem(cacheKey, JSON.stringify(positions));
+      const cacheData = {
+        positions: allPositions,
+        ariesTotalValue: ariesData.totalValue
+      };
+      sessionStorage.setItem(cacheKey, JSON.stringify(cacheData));
       sessionStorage.setItem(`${cacheKey}_time`, Date.now().toString());
       
-      setPositions(positions);
+      setPositions(allPositions);
+      setAriesTotalValue(ariesData.totalValue);
       toast.success("Aptos positions updated!");
     } catch (error) {
       console.error("❌ Error loading positions:", error);
@@ -575,7 +690,13 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
               {expandedProtocols["Joule"] && (
                 <div className="p-3 bg-white dark:bg-gray-900">
                   <ul className="space-y-2">
-                    {joulePositions.map((pos, index) => (
+                    {joulePositions
+                      .sort((a, b) => {
+                        const valueA = parseFloat(a.amount) * parseFloat(a.price || 0);
+                        const valueB = parseFloat(b.amount) * parseFloat(b.price || 0);
+                        return valueB - valueA;
+                      })
+                      .map((pos, index) => (
                       <li key={index} className="flex flex-col p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
                         <div className="flex justify-between items-center">
                           <span>
@@ -622,7 +743,9 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
               {expandedProtocols["Echelon"] && (
                 <div className="p-3 bg-white dark:bg-gray-900">
                   <ul className="space-y-2">
-                    {echelonPositions.map((pos, index) => (
+                    {echelonPositions
+                      .sort((a, b) => parseFloat(b.valueUSD) - parseFloat(a.valueUSD))
+                      .map((pos, index) => (
                       <li key={index} className="flex flex-col p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
                         <div className="flex justify-between items-center">
                           <span>
@@ -654,11 +777,16 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
                   <img src={PROTOCOL_ICONS["Aries"]} alt="Aries" className="w-5 h-5" />
                   <h3 className="text-lg font-semibold">Aries</h3>
                 </div>
-                {expandedProtocols["Aries"] ? (
-                  <ChevronDown size={20} className="text-gray-500" />
-                ) : (
-                  <ChevronRight size={20} className="text-gray-500" />
-                )}
+                <div className="flex items-center gap-2">
+                  <span className="text-lg font-semibold text-gray-700 dark:text-gray-300">
+                    ${ariesTotalValue.toFixed(2)}
+                  </span>
+                  {expandedProtocols["Aries"] ? (
+                    <ChevronDown size={20} className="text-gray-500" />
+                  ) : (
+                    <ChevronRight size={20} className="text-gray-500" />
+                  )}
+                </div>
               </div>
 
               {expandedProtocols["Aries"] && (
