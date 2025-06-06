@@ -346,7 +346,8 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
       if (!dataJoule?.userPositions?.length) return [];
       
       const positions = await Promise.all(dataJoule.userPositions[0].positions_map.data.flatMap(async (position) => {
-        return Promise.all(position.value.lend_positions.data.map(async (pos) => {
+        // Обрабатываем lend позиции
+        const lendPositions = await Promise.all(position.value.lend_positions.data.map(async (pos) => {
           // Получаем данные токена через Panora API
           const response = await fetch(`/api/aptos/panora_prices?tokenAddress=${pos.key}`);
           const data = await response.json();
@@ -403,9 +404,76 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
             protocol: "Joule",
             tokenType: pos.key,
             price: finalPrice,
-            valueUSD: (parseFloat(amount) * finalPrice).toFixed(2)
+            valueUSD: (parseFloat(amount) * finalPrice).toFixed(2),
+            type: "Lend"
           };
         }));
+
+        // Обрабатываем borrow позиции
+        const borrowPositions = await Promise.all(position.value.borrow_positions.data.map(async (pos) => {
+          // Получаем данные токена через Panora API
+          const response = await fetch(`/api/aptos/panora_prices?tokenAddress=${pos.key}`);
+          const data = await response.json();
+          console.log('📊 Panora prices response для', pos.key, ':', data);
+          
+          // Нормализуем адреса для сравнения
+          const normalizeAddress = (addr) => {
+            if (!addr) return '';
+            return addr.toLowerCase()
+              .replace('0x0000000000000000000000000000000000000000000000000000000000000001', '0x1')
+              .replace(/::/g, '::');
+          };
+          
+          // Ищем токен, проверяя оба адреса
+          const tokenInfo = data.find(token => {
+            const tokenAddr = normalizeAddress(token.tokenAddress);
+            const faAddr = normalizeAddress(token.faAddress);
+            const coinAddr = normalizeAddress(pos.key);
+            console.log('🔍 Сравниваем адреса:', {
+              tokenAddr,
+              faAddr,
+              coinAddr,
+              matches: tokenAddr === coinAddr || faAddr === coinAddr
+            });
+            return tokenAddr === coinAddr || faAddr === coinAddr;
+          });
+
+          // Если токен не найден в Panora, используем базовые данные
+          const tokenData = tokenInfo ? {
+            assetName: `${tokenInfo.symbol} (${tokenInfo.name})`,
+            provider: "Joule",
+            decimals: Math.pow(10, tokenInfo.decimals),
+            token: pos.key
+          } : {
+            assetName: pos.key.slice(0, 6) + "..." + pos.key.slice(-6),
+            provider: "Unknown Provider",
+            decimals: 1e6,
+            token: pos.key
+          };
+          
+          const amount = formatAmount(pos.value.borrow_amount, tokenData.decimals);
+          const price = tokenInfo?.usdPrice || 0;
+          
+          // Если цена 0, используем фиксированные цены для известных токенов
+          const finalPrice = price || (tokenData.assetName === 'USDC' ? 1 : 
+                                     tokenData.assetName === 'APT' ? 4.62 : 0);
+          
+          console.log('💰 Итоговая цена для токена', pos.key, ':', finalPrice);
+          
+          return {
+            token: tokenData.assetName,
+            amount: `-${amount}`, // Добавляем минус для borrow позиций
+            provider: tokenData.provider,
+            protocol: "Joule",
+            tokenType: pos.key,
+            price: finalPrice,
+            valueUSD: `-${(parseFloat(amount) * finalPrice).toFixed(2)}`, // Добавляем минус для borrow позиций
+            type: "Borrow",
+            interest: formatAmount(pos.value.interest_accumulated, tokenData.decimals)
+          };
+        }));
+
+        return [...lendPositions, ...borrowPositions];
       }));
 
       return positions.flat();
@@ -502,7 +570,7 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
 
             // Если токен не найден в Panora, используем базовые данные
             const tokenData = tokenInfo ? {
-              assetName: tokenInfo.name,
+              assetName: `${tokenInfo.symbol} (${tokenInfo.name})`,
               provider: "Aries",
               decimals: Math.pow(10, tokenInfo.decimals),
               token: tokenAddress
@@ -646,7 +714,7 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
 
   if (!connected) return null;
 
-  const joulePositions = positions.filter((p) => p.protocol === "Joule" && parseFloat(p.amount) > 0);
+  const joulePositions = positions.filter((p) => p.protocol === "Joule" && parseFloat(p.amount) !== 0);
   const echelonPositions = positions.filter((p) => p.protocol === "Echelon" && parseFloat(p.amount) > 0);
   const ariesPositions = positions.filter((p) => p.protocol === "Aries" && parseFloat(p.amount) > 0);
   const hyperionPositions = positions.filter((p) => p.protocol === "Hyperion" && parseFloat(p.amount) > 0);
@@ -680,11 +748,16 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
                   <img src={PROTOCOL_ICONS["Joule"]} alt="Joule" className="w-5 h-5" />
                   <h3 className="text-lg font-semibold">Joule</h3>
                 </div>
-                {expandedProtocols["Joule"] ? (
-                  <ChevronDown size={20} className="text-gray-500" />
-                ) : (
-                  <ChevronRight size={20} className="text-gray-500" />
-                )}
+                <div className="flex items-center gap-2">
+                  <span className="text-lg font-semibold text-gray-700 dark:text-gray-300">
+                    ${joulePositions.reduce((sum, pos) => sum + parseFloat(pos.valueUSD), 0).toFixed(2)}
+                  </span>
+                  {expandedProtocols["Joule"] ? (
+                    <ChevronDown size={20} className="text-gray-500" />
+                  ) : (
+                    <ChevronRight size={20} className="text-gray-500" />
+                  )}
+                </div>
               </div>
 
               {expandedProtocols["Joule"] && (
@@ -692,8 +765,8 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
                   <ul className="space-y-2">
                     {joulePositions
                       .sort((a, b) => {
-                        const valueA = parseFloat(a.amount) * parseFloat(a.price || 0);
-                        const valueB = parseFloat(b.amount) * parseFloat(b.price || 0);
+                        const valueA = Math.abs(parseFloat(a.valueUSD));
+                        const valueB = Math.abs(parseFloat(b.valueUSD));
                         return valueB - valueA;
                       })
                       .map((pos, index) => (
@@ -702,12 +775,16 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
                           <span>
                             {formatTokenAddress(pos.token)}
                           </span>
-                          <span className="font-bold">{pos.amount}</span>
+                          <span className={`font-bold ${pos.type === "Borrow" ? "text-red-500" : ""}`}>
+                            {pos.amount}
+                          </span>
                         </div>
                         {pos.price && (
                           <div className="flex justify-between items-center mt-1 text-sm text-gray-500">
                             <span>${parseFloat(pos.price).toFixed(2)}</span>
-                            <span>${(parseFloat(pos.amount) * parseFloat(pos.price)).toFixed(2)}</span>
+                            <span className={pos.type === "Borrow" ? "text-red-500" : ""}>
+                              ${pos.valueUSD}
+                            </span>
                           </div>
                         )}
                       </li>
@@ -1268,13 +1345,6 @@ export default function Sidebar() {
                       <span>${(parseFloat(pos.amount) * parseFloat(pos.price)).toFixed(2)}</span>
                     </div>
                   )}
-                  {pos.protocol === "Hyperion" && (
-                    <div className="flex justify-between items-center mt-1 text-sm">
-                      <span className={pos.isActive ? "text-green-500" : "text-red-500"}>
-                        {pos.isActive ? "Active" : "Inactive"}
-                      </span>
-                    </div>
-                  )}
                 </li>
               ))}
             </ul>
@@ -1479,13 +1549,6 @@ export default function Sidebar() {
                                         <div className="flex justify-between items-center mt-1 text-sm text-gray-500">
                                           <span>${parseFloat(pos.price).toFixed(2)}</span>
                                           <span>${(parseFloat(pos.amount) * parseFloat(pos.price)).toFixed(2)}</span>
-                                        </div>
-                                      )}
-                                      {pos.protocol === "Hyperion" && (
-                                        <div className="flex justify-between items-center mt-1 text-sm">
-                                          <span className={pos.isActive ? "text-green-500" : "text-red-500"}>
-                                            {pos.isActive ? "Active" : "Inactive"}
-                                          </span>
                                         </div>
                                       )}
                                     </li>
