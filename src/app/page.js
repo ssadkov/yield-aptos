@@ -4,7 +4,7 @@ import { useChat } from "@ai-sdk/react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import PoolsTable from "@/components/PoolsTable";
 import LendForm from "@/components/LendForm";
 import SwapLendForm from "@/components/SwapLendForm"; // Новый компонент для обмена и лендинга
@@ -19,6 +19,7 @@ import BalancesTable from "@/components/WalletTable"; // Подключаем к
 import WithdrawForm from "@/components/WithdrawForm"; // Подключаем компонент WithdrawForm
 import remarkGfm from "remark-gfm";
 import TransferForm from "@/components/TransferForm"; // Подключаем компонент TransferForm
+import { debounce } from "lodash";
 
 // Отключаем SSR для react-markdown
 const ReactMarkdown = dynamic(() => import("react-markdown"), { ssr: false });
@@ -59,24 +60,56 @@ const presetActions = [
 
 
 export default function Chat() {
-  const { messages, input, handleInputChange, setMessages, append, status } = useChat({
+  const { messages, input, handleInputChange, setMessages, append, status, stop } = useChat({
     maxSteps: 5,
+    onFinish: useCallback((message) => {
+      console.log('Message finished:', message);
+    }, []),
+    onError: useCallback((error) => {
+      console.error('Chat error:', error);
+    }, []),
+    keepLastMessageOnError: true,
+    maxRetries: 1,
   });
 
   const { session } = useSessionData();
 
+  // Мемоизируем вычисления
+  const lastMessage = useMemo(() => {
+    return messages[messages.length - 1];
+  }, [messages]);
 
-  const addBotMessage = (message) => {
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: nanoid(),
-        role: "assistant",
-        content: message,
-      },
-    ]);
-  };
-  
+  // Создаем стабильный обработчик изменения ввода
+  const handleInputChangeStable = useCallback((e) => {
+    handleInputChange(e);
+  }, [handleInputChange]);
+
+  // Стабильный обработчик отправки
+  const stableHandleSubmit = useCallback((e) => {
+    e.preventDefault();
+    if (!input.trim() || status === "submitted" || status === "streaming") return;
+    
+    const email = localStorage.getItem("userEmail");
+    const userId = localStorage.getItem("userId");
+
+    console.log("🔄 Sending user message with:", { email, userId, input });
+
+    append(
+      { role: "user", content: input },
+      { body: { email, userId } }
+    );
+
+    handleInputChange({ target: { value: "" } });
+  }, [append, input, handleInputChange, status]);
+
+  // Очистка при размонтировании
+  useEffect(() => {
+    return () => {
+      if (status === "streaming") {
+        stop?.();
+      }
+    };
+  }, [status, stop]);
 
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
@@ -128,28 +161,20 @@ export default function Chat() {
     }
   };
 
-  const handleSubmitWithUserData = async (e) => {
-    e.preventDefault();
-
-    const email = localStorage.getItem("userEmail");
-    const userId = localStorage.getItem("userId");
-
-    // if (!email || !userId) {
-    //   alert("❌ User email or ID not found. Please log in.");
-    //   return;
-    // }
-
-    console.log("🔄 Sending user message with:", { email, userId, input });
-
-    await append(
-      { role: "user", content: input },
-      { body: { email, userId } }
-    );
-
-    handleInputChange({ target: { value: "" } });
+  const addBotMessage = (message) => {
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: nanoid(),
+        role: "assistant",
+        content: message,
+      },
+    ]);
   };
+  
 
-  const handleSupplyClick = (pool) => {
+  // Оптимизированный обработчик клика по Supply
+  const handleSupplyClick = useCallback((pool) => {
     console.log("🔄 Supply clicked for:", pool);
 
     const userBalance = balances.find((b) => b.asset === pool.asset)?.balance || "0";
@@ -168,7 +193,7 @@ export default function Chat() {
     handleInputChange({
       target: { value: `${userBalance}` },
     });
-  };
+  }, [balances, handleInputChange, setMessages]);
 
   // Lend on Protocol in Chat
   const handleLendClick = async (protocol, token, amount) => {
@@ -492,8 +517,8 @@ export default function Chat() {
             )}
 
 
-            <form onSubmit={handleSubmitWithUserData} className="flex gap-2 p-4 border-t">
-              <Input className="flex-1 p-2 border rounded-lg" value={input} placeholder="Type a message" onChange={handleInputChange} disabled={status === "submitted" || status === "streaming"} />
+            <form onSubmit={stableHandleSubmit} className="flex gap-2 p-4 border-t">
+              <Input className="flex-1 p-2 border rounded-lg" value={input} placeholder="Type a message" onChange={handleInputChangeStable} disabled={status === "submitted" || status === "streaming"} />
               <Button type="submit" className="bg-black text-white" disabled={status === "submitted" || status === "streaming"}>
                 <Send className="h-4 w-4" /> {/* Иконка Send */}
               </Button>

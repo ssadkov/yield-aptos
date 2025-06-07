@@ -33,7 +33,7 @@ export async function POST(req: Request) {
 
 
     const result = streamText({
-      model: openai("gpt-4o"),
+      model: openai("gpt-4.1-nano-2025-04-14"),
       messages,
       system: systemPrompt,
       tools: {
