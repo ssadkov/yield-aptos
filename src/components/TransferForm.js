@@ -25,7 +25,7 @@ export default function TransferForm({ token, amount, toAddress, setMessages }) 
         throw new Error("❌ User not logged in.");
       }
 
-      const mnemonic = generateMnemonicForUser(email, userId);
+      const mnemonic = await generateMnemonicForUser(email, userId);
 
       const walletResponse = await fetch("/api/aptos/restoreWalletFromMnemonic", {
         method: "POST",

@@ -213,10 +213,10 @@ export default function Chat() {
     setIsLending(true);
     addBotMessage(`⏳ Processing lend transaction on ${protocol}...`);
 
-    const mnemonic = generateMnemonicForUser(email, userId);
-    console.log("🔑 Generated mnemonic:", mnemonic);
-
     try {
+      const mnemonic = await generateMnemonicForUser(email, userId);
+      console.log("🔑 Generated mnemonic:", mnemonic);
+
       const walletResponse = await fetch("/api/aptos/restoreWalletFromMnemonic", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
