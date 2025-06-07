@@ -47,108 +47,14 @@ export default function SwapLendForm({ protocol, token, amount, swapToken, onSwa
 
   const handleSwapAndLend = async () => {
     setIsProcessing(true);
-    let privateKeyHex;
-    let toWalletAddress;
-    let lendBalance = 0;
-
     try {
-      addBotMessage("🔄 Initiating Swap...");
-
-      const email = localStorage.getItem("userEmail");
-      const userId = localStorage.getItem("userId");
-      if (!email || !userId) {
-        alert("❌ User email or ID not found. Please log in.");
-        return;
-      }
-
-      const mnemonic = await generateMnemonicForUser(email, userId);
-
-      const walletResponse = await fetch("/api/aptos/restoreWalletFromMnemonic", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mnemonic }),
-      });
-
-      const walletData = await walletResponse.json();
-      if (!walletData.privateKeyHex) {
-        addBotMessage("❌ Failed to retrieve private key.");
-        setIsProcessing(false);
-        return;
-      }
-
-      privateKeyHex = walletData.privateKeyHex;
-      toWalletAddress = walletData.address;
-
-      const useSponsor = isSponsored;
-      const swapApiUrl = useSponsor ? "/api/aptos/panoraSponsoredSwap" : "/api/aptos/panoraSwap";
-
-      const requestBody = {
-        privateKeyHex,
-        fromToken: swapToken,
-        toToken: token,
-        swapAmount: amount,
-        toWalletAddress,
-        ...(useSponsor && { useSponsor: true }),
-      };
-
-      const swapResponse = await fetch(swapApiUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestBody),
-      });
-
-      const swapData = await swapResponse.json();
-
-      if (swapData.transactionHash) {
-        const explorerLink = `https://explorer.aptoslabs.com/txn/${swapData.transactionHash}?network=mainnet`;
-        addBotMessage(`✅ Swap transaction successful!\n🔗 [View on Explorer](${explorerLink})`);
-        lendBalance = await checkTokenBalance(toWalletAddress, token);
-        addBotMessage(`✅ New balance after swap: ${lendBalance}`);
-      } else {
-        addBotMessage(`❌ Swap failed: ${swapData.error}`);
-        setIsProcessing(false);
-        return;
-      }
-
-      addBotMessage(`🔄 Initiating Lend on ${protocol}...`);
-
-      const apiEndpoint =
-        protocol === "Joule"
-          ? "/api/joule/lend"
-          : protocol === "Echelon"
-          ? "/api/echelon/lend"
-          : null;
-
-      if (!apiEndpoint) {
-        addBotMessage(`❌ Unsupported protocol: ${protocol}`);
-        setIsProcessing(false);
-        return;
-      }
-
-      const requestLendBody = {
-        privateKeyHex,
-        token,
-        amount: lendBalance,
-        ...(protocol === "Joule" && { positionId: "1" }),
-      };
-
-      const lendResponse = await fetch(apiEndpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestLendBody),
-      });
-
-      const lendData = await lendResponse.json();
-
-      if (lendData.transactionHash) {
-        const explorerLink = `https://explorer.aptoslabs.com/txn/${lendData.transactionHash}?network=mainnet`;
-        addBotMessage(`✅ Lend transaction successful on ${protocol}!\n🔗 [View on Explorer](${explorerLink})`);
-      } else {
-        addBotMessage(`❌ Lend transaction failed on ${protocol}.`);
-      }
-
+      await onSwap(swapToken, amount, setIsProcessing);
     } catch (error) {
-      addBotMessage(`❌ Error during swap and lend: ${error.message}`);
+      console.error("❌ Error in SwapLendForm:", error);
+      setMessages((prev) => [
+        ...prev,
+        { id: nanoid(), role: "assistant", content: `❌ Error: ${error.message}` },
+      ]);
     } finally {
       setIsProcessing(false);
     }

@@ -61,6 +61,7 @@ const presetActions = [
 
 export default function Chat() {
   const { messages, input, handleInputChange, setMessages, append, status, stop } = useChat({
+    api: "/api/chat",
     maxSteps: 5,
     onFinish: useCallback((message) => {
       console.log('Message finished:', message);
@@ -70,6 +71,10 @@ export default function Chat() {
     }, []),
     keepLastMessageOnError: true,
     maxRetries: 1,
+    body: {
+      email: localStorage.getItem("userEmail"),
+      userId: localStorage.getItem("userId")
+    }
   });
 
   const { session } = useSessionData();
@@ -95,8 +100,7 @@ export default function Chat() {
     console.log("🔄 Sending user message with:", { email, userId, input });
 
     append(
-      { role: "user", content: input },
-      { body: { email, userId } }
+      { role: "user", content: input }
     );
 
     handleInputChange({ target: { value: "" } });
@@ -289,15 +293,24 @@ export default function Chat() {
   // Handle Swap and Lend
   const handleSwapAndLendClick = async (swapToken, amount, setIsProcessing) => {
     setIsProcessing(true);
-    // Здесь добавьте логику для обмена и последующего лендинга, как в вашем туле
     try {
-      // Пример: Выполнить обмен, а затем лендить
+      const message = `🔄 Initiating swap of ${amount} ${swapToken}...`;
+      setMessages((prev) => [
+        ...prev,
+        { id: nanoid(), role: "assistant", content: message },
+      ]);
+
+      // Здесь добавьте логику для обмена и последующего лендинга
       console.log(`🔄 Swapping ${swapToken} for ${amount}...`);
       // Пример выполнения обмена...
       // Затем лендим
       console.log(`💰 Lending ${amount} of ${swapToken}`);
     } catch (error) {
       console.error("❌ Error during Swap and Lend:", error);
+      setMessages((prev) => [
+        ...prev,
+        { id: nanoid(), role: "assistant", content: `❌ Error during Swap and Lend: ${error.message}` },
+      ]);
     } finally {
       setIsProcessing(false);
     }

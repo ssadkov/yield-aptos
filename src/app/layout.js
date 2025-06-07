@@ -7,11 +7,16 @@ import { Analytics } from "@vercel/analytics/react";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  display: 'swap',
+  preload: true,
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  display: 'swap',
+  preload: true,
+  weight: ['400', '500', '600', '700'],
 });
 
 export const metadata = {

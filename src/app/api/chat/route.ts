@@ -14,7 +14,27 @@ import topUpWallet from "./tools/topUpWallet";
 export const maxDuration = 30;
 export async function POST(req: Request) {
   try {
-    const { messages, email, userId } = await req.json();
+    let messages, email, userId;
+    
+    try {
+      const body = await req.json();
+      messages = body.messages;
+      email = body.email;
+      userId = body.userId;
+    } catch (parseError) {
+      console.error("❌ JSON parsing error:", parseError);
+      return new Response(JSON.stringify({ error: "Invalid JSON in request body" }), { 
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    if (!messages || !Array.isArray(messages)) {
+      return new Response(JSON.stringify({ error: "Messages array is required" }), { 
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
 
     if (!email || !userId) {
       console.warn("⚠️ Email or ID not found in request body!");
