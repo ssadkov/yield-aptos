@@ -17,18 +17,22 @@ export async function GET(req) {
         let joulePools = await jouleResponse.json();
         if (Array.isArray(joulePools)) {
           protocolStatus.Joule = 1;
-          joulePools = joulePools.map((pool) => ({
-            asset: pool.asset.assetName,
-            provider: pool.asset.provider,
-            totalAPY: parseFloat(pool.depositApy) + parseFloat(pool.extraAPY.depositAPY) + parseFloat(pool.extraAPY.stakingAPY),
-            depositApy: parseFloat(pool.depositApy),
-            extraAPY: parseFloat(pool.extraAPY.depositAPY),
-            borrowAPY: parseFloat(pool.borrowApy),
-            extraBorrowAPY: parseFloat(pool.extraAPY.borrowAPY),
-            extraStakingAPY: parseFloat(pool.extraAPY.stakingAPY),
-            token: pool.asset.type,
-            protocol: "Joule",
-          }));
+          joulePools = joulePools
+            .filter(pool => pool && pool.asset && pool.asset.assetName)
+            .map((pool) => ({
+              asset: pool.asset.assetName || "Unknown",
+              provider: pool.asset.provider || "Unknown",
+              totalAPY: (parseFloat(pool.depositApy) || 0) + 
+                       (parseFloat(pool.extraAPY?.depositAPY) || 0) + 
+                       (parseFloat(pool.extraAPY?.stakingAPY) || 0),
+              depositApy: parseFloat(pool.depositApy) || 0,
+              extraAPY: parseFloat(pool.extraAPY?.depositAPY) || 0,
+              borrowAPY: parseFloat(pool.borrowApy) || 0,
+              extraBorrowAPY: parseFloat(pool.extraAPY?.borrowAPY) || 0,
+              extraStakingAPY: parseFloat(pool.extraAPY?.stakingAPY) || 0,
+              token: pool.asset.type || "Unknown",
+              protocol: "Joule",
+            }));
           combinedPools.push(...joulePools);
         }
       }
@@ -41,23 +45,25 @@ export async function GET(req) {
       const echelonResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/echelon/markets`);
       if (echelonResponse.ok) {
         let echelonData = await echelonResponse.json();
-        if (echelonData.success && Array.isArray(echelonData.marketData)) {
+        if (echelonData?.success && Array.isArray(echelonData.marketData)) {
           protocolStatus.Echelon = 1;
-          const echelonPools = echelonData.marketData.map((market) => {
-            const tokenData = JOULE_TOKENS.find((t) => t.token === market.coin);
-            return {
-              asset: tokenData ? tokenData.assetName : market.coin,
-              provider: tokenData ? tokenData.provider : "Unknown",
-              totalAPY: (parseFloat(market.supplyAPR) * 100) || 0,
-              depositApy: (parseFloat(market.supplyAPR) * 100) || 0,
-              extraAPY: 0,
-              borrowAPY: (parseFloat(market.borrowAPR) * 100) || 0,
-              extraBorrowAPY: 0,
-              extraStakingAPY: 0,
-              token: market.coin || "Unknown",
-              protocol: "Echelon",
-            };
-          });
+          const echelonPools = echelonData.marketData
+            .filter(market => market && market.coin)
+            .map((market) => {
+              const tokenData = JOULE_TOKENS.find((t) => t.token === market.coin);
+              return {
+                asset: tokenData?.assetName || market.coin || "Unknown",
+                provider: tokenData?.provider || "Unknown",
+                totalAPY: (parseFloat(market.supplyAPR) * 100) || 0,
+                depositApy: (parseFloat(market.supplyAPR) * 100) || 0,
+                extraAPY: 0,
+                borrowAPY: (parseFloat(market.borrowAPR) * 100) || 0,
+                extraBorrowAPY: 0,
+                extraStakingAPY: 0,
+                token: market.coin || "Unknown",
+                protocol: "Echelon",
+              };
+            });
           combinedPools.push(...echelonPools);
         }
       }
@@ -70,20 +76,22 @@ export async function GET(req) {
       const ariesResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/aries/markets`);
       if (ariesResponse.ok) {
         const ariesData = await ariesResponse.json();
-        if (ariesData.success && Array.isArray(ariesData.marketData)) {
+        if (ariesData?.success && Array.isArray(ariesData.marketData)) {
           protocolStatus.Aries = 1;
-          const ariesPools = ariesData.marketData.map((item) => ({
-            asset: item.coinAddress.split("::")[2] || item.coinAddress,
-            provider: "Aries",
-            totalAPY: (parseFloat(item.depositAPR) * 100) || 0,
-            depositApy: (parseFloat(item.depositAPR) * 100) || 0,
-            extraAPY: 0,
-            borrowAPY: (parseFloat(item.borrowAPR) * 100) || 0,
-            extraBorrowAPY: 0,
-            extraStakingAPY: 0,
-            token: item.coinAddress,
-            protocol: "Aries",
-          }));
+          const ariesPools = ariesData.marketData
+            .filter(item => item && item.coinAddress)
+            .map((item) => ({
+              asset: item.coinAddress?.split("::")[2] || item.coinAddress || "Unknown",
+              provider: "Aries",
+              totalAPY: (parseFloat(item.depositAPR) * 100) || 0,
+              depositApy: (parseFloat(item.depositAPR) * 100) || 0,
+              extraAPY: 0,
+              borrowAPY: (parseFloat(item.borrowAPR) * 100) || 0,
+              extraBorrowAPY: 0,
+              extraStakingAPY: 0,
+              token: item.coinAddress || "Unknown",
+              protocol: "Aries",
+            }));
           combinedPools.push(...ariesPools);
         }
       }
@@ -96,9 +104,23 @@ export async function GET(req) {
       const hyperionResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/hyperion/pools`);
       if (hyperionResponse.ok) {
         const hyperionData = await hyperionResponse.json();
-        if (hyperionData.success && Array.isArray(hyperionData.data)) {
+        if (hyperionData?.success && Array.isArray(hyperionData.data)) {
           protocolStatus.Hyperion = 1;
-          combinedPools.push(...hyperionData.data);
+          const hyperionPools = hyperionData.data
+            .filter(pool => pool && pool.asset)
+            .map(pool => ({
+              asset: pool.asset || "Unknown",
+              provider: pool.provider || "Unknown",
+              totalAPY: parseFloat(pool.totalAPY) || 0,
+              depositApy: parseFloat(pool.depositApy) || 0,
+              extraAPY: parseFloat(pool.extraAPY) || 0,
+              borrowAPY: parseFloat(pool.borrowAPY) || 0,
+              extraBorrowAPY: parseFloat(pool.extraBorrowAPY) || 0,
+              extraStakingAPY: parseFloat(pool.extraStakingAPY) || 0,
+              token: pool.token || "Unknown",
+              protocol: "Hyperion",
+            }));
+          combinedPools.push(...hyperionPools);
         }
       }
     } catch (error) {
@@ -110,14 +132,20 @@ export async function GET(req) {
     }
 
     if (assetName) {
-      combinedPools = combinedPools.filter((pool) =>
-        pool.asset.toUpperCase().includes(assetName.toUpperCase()) ||
-        pool.token.toUpperCase().includes(assetName.toUpperCase())
-      );
+      combinedPools = combinedPools.filter((pool) => {
+        if (!pool || !pool.asset || !pool.token) return false;
+        const poolAsset = (pool.asset || "").toUpperCase();
+        const poolToken = (pool.token || "").toUpperCase();
+        const searchAsset = assetName.toUpperCase();
+        return poolAsset.includes(searchAsset) || poolToken.includes(searchAsset);
+      });
     }
 
     if (protocol) {
-      combinedPools = combinedPools.filter((pool) => pool.protocol.toUpperCase() === protocol.toUpperCase());
+      combinedPools = combinedPools.filter((pool) => {
+        if (!pool || !pool.protocol) return false;
+        return (pool.protocol || "").toUpperCase() === protocol.toUpperCase();
+      });
     }
 
     return NextResponse.json({
