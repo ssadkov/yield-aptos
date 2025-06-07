@@ -80,8 +80,8 @@ function AptosWalletBlock({ onDisconnect }) {
 
   return (
     <div className="w-full text-center p-3 rounded-lg bg-gradient-to-r from-purple-500 to-purple-600 shadow-md">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row items-center justify-between">
+        <div className="flex items-center gap-2 mb-2 sm:mb-0">
           <Wallet className="h-5 w-5 text-white" />
           <span className="text-lg text-white font-medium">
             {addressStr ? `${addressStr.slice(0, 5)}...${addressStr.slice(-4)}` : ""}
@@ -93,6 +93,8 @@ function AptosWalletBlock({ onDisconnect }) {
           >
             <Copy size={18} className="text-white" />
           </button>
+        </div>
+        <div className="flex items-center gap-2">
           <button
             onClick={() => {
               if (window.confirm("Are you sure you want to view your mnemonic phrase? Make sure no one else is watching your screen.")) {
@@ -113,8 +115,6 @@ function AptosWalletBlock({ onDisconnect }) {
           >
             <Globe size={18} className="text-white" />
           </a>
-        </div>
-        <div className="flex items-center gap-2">
           <button 
             onClick={fetchAptosBalances}
             className="p-1 rounded-md bg-white/10 hover:bg-white/20 transition-colors"
@@ -1386,8 +1386,8 @@ export default function Sidebar() {
                 <div className="w-full text-center">
                   <div className="w-full bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 p-4 rounded-lg mt-4 shadow-md">
                     <div className="flex flex-col items-center">
-                      <div className="flex items-center justify-between w-full mb-2">
-                        <div className="flex items-center gap-2">
+                      <div className="flex flex-col sm:flex-row items-center justify-between w-full mb-2">
+                        <div className="flex items-center gap-2 mb-2 sm:mb-0">
                           <Wallet className="h-5 w-5 text-white" />
                           <span className="text-lg text-white font-medium">
                             {formatAddress(aptosAddress)}
@@ -1399,7 +1399,9 @@ export default function Sidebar() {
                           >
                             <Copy size={18} className="text-white" />
                           </button>
-                          <button
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button 
                             onClick={() => {
                               if (window.confirm("Are you sure you want to view your mnemonic phrase? Make sure no one else is watching your screen.")) {
                                 toast(`Mnemonic: ${mnemonic}`);
@@ -1419,8 +1421,6 @@ export default function Sidebar() {
                           >
                             <Globe size={18} className="text-white" />
                           </a>
-                        </div>
-                        <div className="flex items-center gap-2">
                           <button 
                             onClick={() => fetchBalances(aptosAddress)} 
                             className="p-1 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
