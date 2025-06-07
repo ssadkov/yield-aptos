@@ -4,9 +4,20 @@ import { Button } from "@/components/ui/button";
 import JOULE_TOKENS from "@/app/api/joule/jouleTokens";
 import PROTOCOL_ICONS from "@/app/api/aptos/markets/protocolIcons";
 import { nanoid } from "nanoid";
+import { useState, useEffect } from "react";
 
+export default function PoolsTable({ pools, balances, onSupplyClick, onBotMessage, setMessages, handleInputChange, append }) {
+  const [hasWallet, setHasWallet] = useState(false);
+  const [walletAddress, setWalletAddress] = useState(null);
 
-export default function PoolsTable({ pools, balances, onSupplyClick, onBotMessage, setMessages, handleInputChange, append   }) {
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const address = localStorage.getItem("aptosWalletAddress");
+      setHasWallet(!!address);
+      setWalletAddress(address);
+    }
+  }, []);
+
   const hasToken = (token) => balances.some((b) => b.asset === token && parseFloat(b.balance) > 0);
   const hasAnyBalance = balances.length > 0 && balances.some((b) => parseFloat(b.balance) > 0.01);
 
@@ -15,9 +26,6 @@ export default function PoolsTable({ pools, balances, onSupplyClick, onBotMessag
     const tokenData = JOULE_TOKENS.find((t) => t.token === token);
     return tokenData ? tokenData.icon : null;
   };
-
-
-  const hasWallet = typeof window !== "undefined" && localStorage.getItem("aptosWalletAddress");
 
   const handleTopUpClick = () => {
     const walletAddress = typeof window !== "undefined" && localStorage.getItem("aptosWalletAddress");

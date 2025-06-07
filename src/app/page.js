@@ -71,10 +71,7 @@ export default function Chat() {
     }, []),
     keepLastMessageOnError: true,
     maxRetries: 1,
-    body: {
-      email: localStorage.getItem("userEmail"),
-      userId: localStorage.getItem("userId")
-    }
+    body: getInitialSession()
   });
 
   const { session } = useSessionData();
@@ -91,6 +88,7 @@ export default function Chat() {
 
   // Стабильный обработчик отправки
   const stableHandleSubmit = useCallback((e) => {
+    if (typeof window === 'undefined') return;
     e.preventDefault();
     if (!input.trim() || status === "submitted" || status === "streaming") return;
     
@@ -179,7 +177,10 @@ export default function Chat() {
 
   // Оптимизированный обработчик клика по Supply
   const handleSupplyClick = useCallback((pool) => {
-    console.log("🔄 Supply clicked for:", pool);
+    if (typeof window === 'undefined') return;
+    console.log("Clicked supply pool:", pool);
+    const email = localStorage.getItem("userEmail");
+    const userId = localStorage.getItem("userId");
 
     const userBalance = balances.find((b) => b.asset === pool.asset)?.balance || "0";
 
@@ -551,3 +552,11 @@ export default function Chat() {
     </div>
   );
 }
+
+const getInitialSession = () => {
+  if (typeof window === 'undefined') return null;
+  return {
+    email: localStorage.getItem("userEmail"),
+    userId: localStorage.getItem("userId")
+  };
+};
