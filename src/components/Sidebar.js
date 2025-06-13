@@ -649,12 +649,12 @@ function AptosWalletPositionsBlock({ resetOnDisconnect }) {
     try {
       console.log('🔄 Начинаем загрузку позиций для адреса:', addressStr);
       
-      // Кэшируем результаты на 30 секунд
+      // Кэшируем результаты на 3 секунды
       const cacheKey = `aptos_positions_${addressStr}`;
       const cachedData = sessionStorage.getItem(cacheKey);
       const cacheTime = sessionStorage.getItem(`${cacheKey}_time`);
       
-      if (cachedData && cacheTime && Date.now() - parseInt(cacheTime) < 30000) {
+      if (cachedData && cacheTime && Date.now() - parseInt(cacheTime) < 3000) {
         const data = JSON.parse(cachedData);
         setPositions(data.positions);
         setAriesTotalValue(data.ariesTotalValue || 0);
@@ -1117,12 +1117,12 @@ export default function Sidebar() {
     try {
       console.log(`🔄 Updating balances for ${address}`);
       
-      // Кэшируем результаты на 30 секунд
+      // Кэшируем результаты на 3 секунды
       const cacheKey = `balances_${address}`;
       const cachedData = sessionStorage.getItem(cacheKey);
       const cacheTime = sessionStorage.getItem(`${cacheKey}_time`);
       
-      if (cachedData && cacheTime && Date.now() - parseInt(cacheTime) < 300) {
+      if (cachedData && cacheTime && Date.now() - parseInt(cacheTime) < 3000) {
         const data = JSON.parse(cachedData);
         setBalances(data.balances || []);
         setPositions(data.positions || []);
@@ -1157,12 +1157,12 @@ export default function Sidebar() {
     try {
       console.log(`🔄 Fetching user positions for ${address}`);
       
-      // Кэшируем результаты на 30 секунд
+      // Кэшируем результаты на 3 секунды
       const cacheKey = `positions_${address}`;
       const cachedData = sessionStorage.getItem(cacheKey);
       const cacheTime = sessionStorage.getItem(`${cacheKey}_time`);
       
-      if (cachedData && cacheTime && Date.now() - parseInt(cacheTime) < 30000) {
+      if (cachedData && cacheTime && Date.now() - parseInt(cacheTime) < 3000) {
         const data = JSON.parse(cachedData);
         setPositions(data);
         return data;
