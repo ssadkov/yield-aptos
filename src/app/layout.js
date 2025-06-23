@@ -1,22 +1,14 @@
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { SessionProvider } from "@/context/SessionProvider";
 import ClientLayout from "@/components/ClientLayout";
 import { Analytics } from "@vercel/analytics/react";
 
-const geistSans = Geist({
+const inter = Inter({
   variable: "--font-geist-sans",
   subsets: ["latin"],
   display: 'swap',
   preload: true,
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-  display: 'swap',
-  preload: true,
-  weight: ['400', '500', '600', '700'],
 });
 
 export const metadata = {
@@ -53,7 +45,7 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased flex h-screen overflow-hidden`}>
+      <body className={`${inter.variable} antialiased flex h-screen overflow-hidden`}>
         <SessionProvider>
           <ClientLayout>{children}</ClientLayout>
           <Analytics />

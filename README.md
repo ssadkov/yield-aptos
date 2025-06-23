@@ -4,7 +4,7 @@
 
 ## <img src="https://img.icons8.com/color/48/000000/info.png" width="25" alt="About"/> About Yield AI
 
-We’re building our application on top of the **Move Agent Kit** framework. Currently, we’ve integrated two protocols: **Joule** and **Echelon**.
+We're building our application on top of the **Move Agent Kit** framework. Currently, we've integrated two protocols: **Joule** and **Echelon**.
 
 #### Key Features:
 You can generate your own wallet using your Google account, top it up, and let Yield AI find the best yield farming strategy for your assets. You get a full overview of your DeFi portfolio.
@@ -13,7 +13,7 @@ You can generate your own wallet using your Google account, top it up, and let Y
 
 With countless yield farming opportunities in the crypto space, identifying the best pool with the highest APR can be overwhelming. **Yield AI** takes care of the heavy lifting, enabling you to earn with just a touch of a button. 
 
-Aptos’ fast and low-cost transactions further enhance the efficiency of the process.
+Aptos' fast and low-cost transactions further enhance the efficiency of the process.
 
 ## Technologies We Used
 
@@ -41,11 +41,60 @@ Aptos’ fast and low-cost transactions further enhance the efficiency of the pr
 Integration example: [FinKeeper](https://finkeeper.pro/app) 
 [FinKeeper source](https://github.com/finkeeper/finkeeper/blob/main/www/frontend/modules/app/components/APTApi.php#L10)
 
+## API Caching Configuration
+
+### Cache Headers
+
+The API endpoints use configurable caching to balance performance and data freshness:
+
+#### Available Functions
+
+- `getCacheHeaders(maxAge)` - Set cache duration in seconds (default: 5)
+- `getNoCacheHeaders()` - Completely disable caching
+
+#### Usage Examples
+
+```javascript
+import { getCacheHeaders, getNoCacheHeaders } from "../../../../lib/utils";
+
+// Set 5-second cache
+return NextResponse.json(data, {
+  headers: getCacheHeaders(5)
+});
+
+// Disable caching completely
+return NextResponse.json(data, {
+  headers: getNoCacheHeaders()
+});
+```
+
+#### Cache Headers Explained
+
+- `max-age=5` - Browser cache duration (5 seconds)
+- `s-maxage=5` - CDN cache duration (5 seconds)  
+- `stale-while-revalidate=10` - Serve stale content while revalidating (10 seconds)
+- `CDN-Cache-Control` - Vercel CDN specific header
+- `Vercel-CDN-Cache-Control` - Vercel CDN specific header
+
+### Current Cache Settings
+
+- **Hyperion userPositions**: 5 seconds
+- **Hyperion pools**: 5 seconds  
+- **Joule pools**: 5 seconds
+
+### To Disable Caching
+
+If you want to completely disable caching for an endpoint, use:
+
+```javascript
+return NextResponse.json(data, {
+  headers: getNoCacheHeaders()
+});
+```
 
 ---
 
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
-
 
 ## 🛠 Environment Variables
 IMPORTANT!

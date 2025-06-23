@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import fetch from "node-fetch";
+import { getCacheHeaders } from "../../../../lib/utils";
 
 /**
  * Получает данные о всех пулах из API Joule Finance
@@ -52,7 +53,10 @@ export async function GET(req) {
             );
         }
 
-        return NextResponse.json(filteredPools, { status: 200 });
+        return NextResponse.json(filteredPools, { 
+            status: 200,
+            headers: getCacheHeaders(5)
+        });
     } catch (error) {
         console.error(`❌ Ошибка в API маршруте: ${error.message}`);
         return NextResponse.json({ error: "Ошибка сервера" }, { status: 500 });

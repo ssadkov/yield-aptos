@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import sdk from "../config";
+import { getCacheHeaders } from "../../../../lib/utils";
 
 export async function GET(req) {
   try {
@@ -22,10 +23,12 @@ export async function GET(req) {
       address: address
     });
     
-    // Возвращаем сырые данные
+    // Возвращаем сырые данные с настройками кэширования
     return NextResponse.json({
       success: true,
       data: positions
+    }, {
+      headers: getCacheHeaders(5)
     });
 
   } catch (error) {

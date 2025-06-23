@@ -20,25 +20,38 @@ export async function GET() {
   try {
     // Получаем список всех рынков
     const markets = await client.getAllMarkets();
-    // Выводим список всех функций EchelonClient
-    //console.log("Available methods:", Object.keys(Object.getPrototypeOf(client)));
+    console.log("=== ALL MARKETS ===");
+    console.log(JSON.stringify(markets, null, 2));
 
     // Массив для хранения информации о каждом рынке
     const marketData = [];
 
     // Проходим по каждому marketId и получаем coin и APR
     for (const market of markets) {
-      const coin = await client.getMarketCoin(market); // Получаем coin
-      const apr = await client.getSupplyApr(market); // Получаем Supply APR
-      const bapr = await client.getBorrowApr(market); // Получаем Borrow APR
+      console.log(`\n=== Processing Market: ${market} ===`);
+      
+      const coin = await client.getMarketCoin(market);
+      console.log("Market Coin:", JSON.stringify(coin, null, 2));
+      
+      const apr = await client.getSupplyApr(market);
+      console.log("Supply APR:", JSON.stringify(apr, null, 2));
+      
+      const bapr = await client.getBorrowApr(market);
+      console.log("Borrow APR:", JSON.stringify(bapr, null, 2));
 
-      marketData.push({
+      const marketInfo = {
         market,
         coin,
         supplyAPR: apr,
         borrowAPR: bapr,
-      });
+      };
+      
+      console.log("Combined Market Info:", JSON.stringify(marketInfo, null, 2));
+      marketData.push(marketInfo);
     }
+
+    console.log("\n=== FINAL MARKET DATA ===");
+    console.log(JSON.stringify(marketData, null, 2));
 
     return NextResponse.json({ success: true, marketData });
   } catch (error) {
