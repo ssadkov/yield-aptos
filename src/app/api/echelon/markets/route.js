@@ -2,10 +2,16 @@ import { NextResponse } from "next/server";
 import { EchelonClient } from "@echelonmarket/echelon-sdk";
 import { Aptos, AptosConfig, Network } from "@aptos-labs/ts-sdk";
 
+// Отключаем кэширование для этого API route
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const fetchCache = 'force-no-store';
+
 // Создаём экземпляр Aptos SDK
 const aptos = new Aptos(
   new AptosConfig({
     network: Network.MAINNET, // Используем основную сеть Aptos
+    apiKey: process.env.APTOS_API_KEY, // Используем API key
     fullnode: process.env.APTOS_RPC_URL, // RPC-эндпоинт берём из .env
   })
 );
@@ -53,9 +59,22 @@ export async function GET() {
     console.log("\n=== FINAL MARKET DATA ===");
     console.log(JSON.stringify(marketData, null, 2));
 
-    return NextResponse.json({ success: true, marketData });
+    return NextResponse.json({ success: true, marketData }, {
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    });
   } catch (error) {
     console.error("Error fetching market data:", error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: error.message }, { 
+      status: 500,
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    });
   }
 }

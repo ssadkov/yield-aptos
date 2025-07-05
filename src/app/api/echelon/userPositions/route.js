@@ -5,6 +5,11 @@ import {
     Network,
 } from "@aptos-labs/ts-sdk";
 
+// Отключаем кэширование для этого API route
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const fetchCache = 'force-no-store';
+
 export async function GET(req) {
     try {
         const { searchParams } = new URL(req.url);
@@ -19,7 +24,12 @@ export async function GET(req) {
         if (!address) {
             return new Response(JSON.stringify({ error: "Address is required" }), {
                 status: 400,
-                headers: { "Content-Type": "application/json" }
+                headers: { 
+                    "Content-Type": "application/json",
+                    "Cache-Control": "no-cache, no-store, must-revalidate",
+                    "Pragma": "no-cache",
+                    "Expires": "0"
+                }
             });
         }
 
@@ -31,24 +41,75 @@ export async function GET(req) {
         // Получаем данные по рынкам
         const marketData = await Promise.all(
             markets.map(async (market) => {
-                const supply = await echelonClient.getAccountSupply(address, market);
-                const supplyApr = await echelonClient.getSupplyApr(market);
-                const coin = await echelonClient.getMarketCoin(market);
-                return supply > 0 ? { market, coin, supply, supplyApr } : null;
+                try {
+                    const supply = await echelonClient.getAccountSupply(address, market);
+                    const supplyApr = await echelonClient.getSupplyApr(market);
+                    const coin = await echelonClient.getMarketCoin(market);
+                    
+                    // Получаем borrow данные
+                    let borrowed = 0;
+                    let borrowApr = 0;
+                    try {
+                        borrowed = await echelonClient.getAccountLiability(address, market);
+                        borrowApr = await echelonClient.getBorrowApr(market);
+                    } catch (borrowError) {
+                        console.log(`Borrow data error for market ${market}:`, borrowError.message);
+                    }
+                    
+                    const positions = [];
+                    
+                    // Добавляем supply позицию, если есть депозиты
+                    if (supply > 0) {
+                        positions.push({
+                            market,
+                            coin,
+                            type: 'supply',
+                            amount: supply,
+                            apr: supplyApr
+                        });
+                    }
+                    
+                    // Добавляем borrow позицию, если есть займы
+                    if (borrowed > 0) {
+                        positions.push({
+                            market,
+                            coin,
+                            type: 'borrow',
+                            amount: borrowed,
+                            apr: borrowApr
+                        });
+                    }
+                    
+                    return positions;
+                } catch (error) {
+                    console.log(`Error processing market ${market}:`, error.message);
+                    return [];
+                }
             })
         );
         
-        const userPositions = marketData.filter(Boolean);
+        // Объединяем все позиции в один массив
+        const userPositions = marketData.flat().filter(Boolean);
 
         return new Response(JSON.stringify({ userPositions }), {
             status: 200,
-            headers: { "Content-Type": "application/json" }
+            headers: { 
+                "Content-Type": "application/json",
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0"
+            }
         });
     } catch (error) {
         console.error("❌ Error fetching Echelon positions:", error);
         return new Response(JSON.stringify({ error: "Failed to fetch positions" }), {
             status: 500,
-            headers: { "Content-Type": "application/json" }
+            headers: { 
+                "Content-Type": "application/json",
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0"
+            }
         });
     }
 }
