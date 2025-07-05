@@ -11,7 +11,10 @@ import JOULE_TOKENS from "../jouleTokens"; // 📌 Таблица токенов
 console.log("🔹 JOULE_TOKENS loaded:", JOULE_TOKENS);
 
 // ✅ Настройка подключения к Aptos
-const aptosConfig = new AptosConfig({ network: Network.MAINNET });
+const aptosConfig = new AptosConfig({ 
+    network: Network.MAINNET,
+    apiKey: process.env.APTOS_API_KEY 
+});
 const aptos = new Aptos(aptosConfig);
 
 export async function POST(req) {

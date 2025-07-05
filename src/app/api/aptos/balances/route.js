@@ -14,7 +14,7 @@ export async function GET(req) {
 
     console.log(`🔍 Запрашиваем балансы для адреса: ${address}`);
 
-    const fullnodeUrl = `https://fullnode.mainnet.aptoslabs.com/v1/accounts/${address}/balance`;
+    const fullnodeUrl = `https://fullnode.mainnet.aptoslabs.com/v1/accounts/${address}/balance?api_key=${process.env.APTOS_API_KEY}`;
     const balances = [];
     const positions = [];
 

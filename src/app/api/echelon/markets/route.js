@@ -2,17 +2,18 @@ import { NextResponse } from "next/server";
 import { EchelonClient } from "@echelonmarket/echelon-sdk";
 import { Aptos, AptosConfig, Network } from "@aptos-labs/ts-sdk";
 
-// Отключаем кэширование для этого API route
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-export const fetchCache = 'force-no-store';
+// Кэшируем данные о рынках на 10 минут (600 секунд)
+export const revalidate = 600;
 
-// Создаём экземпляр Aptos SDK
+// Функция задержки для избежания лимитов API
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Исправленный конфиг: fullnode без api_key, ключ отдельным параметром
 const aptos = new Aptos(
   new AptosConfig({
-    network: Network.MAINNET, // Используем основную сеть Aptos
-    apiKey: process.env.APTOS_API_KEY, // Используем API key
-    fullnode: process.env.APTOS_RPC_URL, // RPC-эндпоинт берём из .env
+    network: Network.MAINNET,
+    fullnode: 'https://fullnode.mainnet.aptoslabs.com/v1',
+    apiKey: process.env.APTOS_API_KEY
   })
 );
 
@@ -22,48 +23,155 @@ const client = new EchelonClient(
   process.env.ECHELON_CONTRACT_ADDRESS // Деплойнутый контракт Echelon
 );
 
+// Простое кэширование в памяти для dev режима
+let cacheData = null;
+let cacheTimestamp = 0;
+const CACHE_DURATION = 600000; // 10 минут в миллисекундах
+
 export async function GET() {
+  const startTime = Date.now();
+  const cacheKey = `echelon-markets-${Math.floor(Date.now() / (600 * 1000))}`; // Ключ кэша на 10 минут
+  const isDev = process.env.NODE_ENV === 'development';
+  
+  console.log(`🔄 [${new Date().toISOString()}] Echelon Markets API called`);
+  console.log(`📦 Cache key: ${cacheKey}`);
+  console.log(`🔧 Environment: ${process.env.NODE_ENV}`);
+  
+  // Проверяем кэш в dev режиме
+  if (isDev && cacheData && (Date.now() - cacheTimestamp) < CACHE_DURATION) {
+    console.log(`💾 Returning cached data (dev mode)`);
+    console.log(`⏱️ Cache age: ${Math.round((Date.now() - cacheTimestamp) / 1000)}s`);
+    
+    return NextResponse.json({ 
+      success: true, 
+      marketData: cacheData,
+      cacheInfo: {
+        key: cacheKey,
+        cachedUntil: new Date(cacheTimestamp + CACHE_DURATION).toISOString(),
+        processingTime: 0,
+        marketsCount: cacheData.length,
+        fromCache: true
+      }
+    }, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=600, stale-while-revalidate=300',
+        'ETag': `"${cacheKey}"`,
+        'X-Cache-Status': 'HIT',
+        'X-Processing-Time': '0'
+      }
+    });
+  }
+  
   try {
     // Получаем список всех рынков
+    console.log(`🔍 Fetching markets from blockchain...`);
     const markets = await client.getAllMarkets();
+    console.log(`✅ Found ${markets.length} markets`);
     console.log("=== ALL MARKETS ===");
     console.log(JSON.stringify(markets, null, 2));
 
-    // Массив для хранения информации о каждом рынке
+    // Получаем данные по всем рынкам с задержками
     const marketData = [];
+    let hadError = false;
+    const errors = [];
+    for (let i = 0; i < markets.length; i++) {
+      const market = markets[i];
+      try {
+        console.log(`\n=== Processing Market ${i + 1}/${markets.length}: ${market} ===`);
+        
+        // Добавляем задержку между рынками (100ms)
+        if (i > 0) {
+          await delay(100);
+        }
+        
+        // Параллельно получаем все данные для одного рынка
+        const [coin, apr, bapr] = await Promise.all([
+          client.getMarketCoin(market),
+          client.getSupplyApr(market),
+          client.getBorrowApr(market)
+        ]);
+        
+        console.log("Market Coin:", JSON.stringify(coin, null, 2));
+        console.log("Supply APR:", JSON.stringify(apr, null, 2));
+        console.log("Borrow APR:", JSON.stringify(bapr, null, 2));
 
-    // Проходим по каждому marketId и получаем coin и APR
-    for (const market of markets) {
-      console.log(`\n=== Processing Market: ${market} ===`);
-      
-      const coin = await client.getMarketCoin(market);
-      console.log("Market Coin:", JSON.stringify(coin, null, 2));
-      
-      const apr = await client.getSupplyApr(market);
-      console.log("Supply APR:", JSON.stringify(apr, null, 2));
-      
-      const bapr = await client.getBorrowApr(market);
-      console.log("Borrow APR:", JSON.stringify(bapr, null, 2));
-
-      const marketInfo = {
-        market,
-        coin,
-        supplyAPR: apr,
-        borrowAPR: bapr,
-      };
-      
-      console.log("Combined Market Info:", JSON.stringify(marketInfo, null, 2));
-      marketData.push(marketInfo);
+        const marketInfo = {
+          market,
+          coin,
+          supplyAPR: apr,
+          borrowAPR: bapr,
+        };
+        
+        console.log("Combined Market Info:", JSON.stringify(marketInfo, null, 2));
+        marketData.push(marketInfo);
+      } catch (error) {
+        hadError = true;
+        errors.push({ market, message: error?.message || String(error) });
+        console.error(`Error processing market ${market}:`, error.message);
+        // Продолжаем обработку других рынков
+      }
     }
 
-    console.log("\n=== FINAL MARKET DATA ===");
+    const endTime = Date.now();
+    const duration = endTime - startTime;
+    
+    console.log(`\n=== FINAL MARKET DATA ===`);
+    console.log(`⏱️ Total processing time: ${duration}ms`);
+    console.log(`📊 Processed ${marketData.length} markets successfully`);
+    console.log(`💾 Data will be cached for 10 minutes (until ${new Date(Date.now() + 600000).toISOString()})`);
     console.log(JSON.stringify(marketData, null, 2));
 
-    return NextResponse.json({ success: true, marketData }, {
+    if (hadError) {
+      // Не обновляем кэш, возвращаем ошибку и частичные данные
+      console.warn('⚠️ Not all markets loaded, cache NOT updated!');
+      return NextResponse.json({
+        success: false,
+        incomplete: true,
+        error: 'Some markets failed to load, cache not updated',
+        errors,
+        marketData,
+        cacheInfo: {
+          key: cacheKey,
+          cachedUntil: null,
+          processingTime: duration,
+          marketsCount: marketData.length,
+          fromCache: false
+        }
+      }, {
+        status: 502,
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+          'X-Cache-Status': 'ERROR',
+          'X-Processing-Time': duration.toString()
+        }
+      });
+    }
+
+    // Сохраняем в кэш для dev режима
+    if (isDev) {
+      cacheData = marketData;
+      cacheTimestamp = Date.now();
+      console.log(`💾 Data cached in memory (dev mode)`);
+    }
+
+    return NextResponse.json({ 
+      success: true, 
+      marketData,
+      cacheInfo: {
+        key: cacheKey,
+        cachedUntil: new Date(Date.now() + 600000).toISOString(),
+        processingTime: duration,
+        marketsCount: marketData.length,
+        fromCache: false
+      }
+    }, {
       headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
+        'Cache-Control': 'public, s-maxage=600, stale-while-revalidate=300',
+        'ETag': `"${cacheKey}"`,
+        'X-Cache-Status': 'MISS', // Показываем, что данные загружены заново
+        'X-Processing-Time': duration.toString()
       }
     });
   } catch (error) {

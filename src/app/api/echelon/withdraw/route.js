@@ -9,7 +9,11 @@ import {
 } from "@aptos-labs/ts-sdk";
 import JOULE_TOKENS from "../../joule/jouleTokens";
 
-const aptosConfig = new AptosConfig({ network: Network.MAINNET });
+const aptosConfig = new AptosConfig({ 
+    network: Network.MAINNET,
+    fullnode: 'https://fullnode.mainnet.aptoslabs.com/v1',
+    apiKey: process.env.APTOS_API_KEY 
+});
 const aptos = new Aptos(aptosConfig);
 
 async function getPoolAddress(token) {

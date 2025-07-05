@@ -25,7 +25,10 @@ export async function POST(req) {
         console.log(`🔹 Initiating swap: ${swapAmount} ${fromToken} to ${toToken}`);
 
         // Создаем объект aptos для работы с сетью
-        const aptosConfig = new AptosConfig({ network: Network.MAINNET }); // Настройка для сети MAINNET
+        const aptosConfig = new AptosConfig({ 
+    network: Network.MAINNET,
+    apiKey: process.env.APTOS_API_KEY 
+}); // Настройка для сети MAINNET
         const aptos = new Aptos(aptosConfig); // Инициализация Aptos SDK
 
         // Подготавливаем агент с помощью приватного ключа

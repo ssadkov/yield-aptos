@@ -9,7 +9,10 @@ import {
 } from "@aptos-labs/ts-sdk";
 import JOULE_TOKENS from "../../joule/jouleTokens"; // Таблица токенов Joule
 
-const aptosConfig = new AptosConfig({ network: Network.MAINNET });
+const aptosConfig = new AptosConfig({ 
+    network: Network.MAINNET,
+    apiKey: process.env.APTOS_API_KEY 
+});
 const aptos = new Aptos(aptosConfig);
 
 export async function POST(req) {

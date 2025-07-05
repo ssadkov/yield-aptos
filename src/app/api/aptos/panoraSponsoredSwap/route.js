@@ -11,7 +11,10 @@ import {
 import axios from "axios";
 
 // ✅ Инициализация Aptos SDK
-const aptosConfig = new AptosConfig({ network: Network.MAINNET });
+const aptosConfig = new AptosConfig({ 
+    network: Network.MAINNET,
+    apiKey: process.env.APTOS_API_KEY 
+});
 const aptos = new Aptos(aptosConfig);
 
 export async function POST(req) {

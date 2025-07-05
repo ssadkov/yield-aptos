@@ -10,7 +10,11 @@ import {
 import JOULE_TOKENS from "../../joule/jouleTokens"; // ✅ Используем JOULE_TOKENS вместо ECHELON_TOKENS
 
 // ✅ Настройка подключения к Aptos
-const aptosConfig = new AptosConfig({ network: Network.MAINNET });
+const aptosConfig = new AptosConfig({ 
+    network: Network.MAINNET,
+    fullnode: 'https://fullnode.mainnet.aptoslabs.com/v1',
+    apiKey: process.env.APTOS_API_KEY 
+});
 const aptos = new Aptos(aptosConfig);
 
 /**

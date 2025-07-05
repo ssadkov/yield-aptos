@@ -17,7 +17,27 @@ const nextConfig = {
                 ],
             },
             {
-                // API routes - no cache
+                // Echelon markets API - cache for 10 minutes
+                source: '/api/echelon/markets',
+                headers: [
+                    {
+                        key: 'Cache-Control',
+                        value: 'public, s-maxage=600, stale-while-revalidate=300',
+                    },
+                ],
+            },
+            {
+                // Main markets API - cache for 2 minutes
+                source: '/api/aptos/markets',
+                headers: [
+                    {
+                        key: 'Cache-Control',
+                        value: 'public, s-maxage=120, stale-while-revalidate=60',
+                    },
+                ],
+            },
+            {
+                // API routes - no cache (except markets)
                 source: '/api/:path*',
                 headers: [
                     {
