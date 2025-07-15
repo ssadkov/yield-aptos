@@ -6,7 +6,7 @@ import {
 import { LENDING_ASSETS_ABI } from "./abi/lending_assets";
 import { Aptos } from "@aptos-labs/ts-sdk";
 import { fp64ToFloat } from "./utils/fp64ToFloat";
-import { AnyNumber } from "@thalalabs/surf/build/types/types/common";
+type AnyNumber = string | number | bigint;
 import { createEntryPayload, EntryPayload } from "@thalalabs/surf";
 import { LENDING_SCRIPTS_ABI } from "./abi/lending_scripts";
 import { FARMING_LENDING_ABI } from "./abi/farming_lending";
