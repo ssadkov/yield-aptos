@@ -1,4 +1,4 @@
-import { EchelonClient } from "@echelonmarket/echelon-sdk";
+import { EchelonClient } from "../../../../echelon-sdk/dist/index.js";
 import {
     Aptos,
     AptosConfig,

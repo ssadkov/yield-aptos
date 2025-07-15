@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { EchelonClient } from "@echelonmarket/echelon-sdk";
+import { EchelonClient } from "../../../../echelon-sdk/dist/index.js";
 import { Aptos, AptosConfig, Network } from "@aptos-labs/ts-sdk";
 
 // Кэшируем данные о рынках на 10 минут (600 секунд)
