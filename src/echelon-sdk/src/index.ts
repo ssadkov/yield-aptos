@@ -10,15 +10,13 @@ type AnyNumber = string | number | bigint;
 import { createEntryPayload, EntryPayload } from "@thalalabs/surf";
 import { LENDING_SCRIPTS_ABI } from "./abi/lending_scripts";
 import { FARMING_LENDING_ABI } from "./abi/farming_lending";
-import { Client } from "@thalalabs/surf/build/types/core/Client";
-
 /**
  * EchelonClient class for interacting with the Aptos blockchain.
  */
 export class EchelonClient {
   aptos: Aptos;
   address: `0x${string}`;
-  surfClient: Client<DefaultABITable>;
+  surfClient: ReturnType<typeof createSurfClient>;
 
   /**
    * Creates an instance of EchelonClient.
