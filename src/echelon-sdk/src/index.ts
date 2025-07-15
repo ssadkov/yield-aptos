@@ -10,24 +10,23 @@ type AnyNumber = string | number | bigint;
 import { createEntryPayload, EntryPayload } from "@thalalabs/surf";
 import { LENDING_SCRIPTS_ABI } from "./abi/lending_scripts";
 import { FARMING_LENDING_ABI } from "./abi/farming_lending";
-import { RESTClient } from "@initia/initia.js/dist/client/rest/RESTClient";
 import { Client } from "@thalalabs/surf/build/types/core/Client";
 
 /**
  * EchelonClient class for interacting with the Aptos blockchain.
  */
 export class EchelonClient {
-  aptos: Aptos | RESTClient;
+  aptos: Aptos;
   address: `0x${string}`;
   surfClient: Client<DefaultABITable>;
 
   /**
    * Creates an instance of EchelonClient.
    *
-   * @param {Aptos | RESTClient} aptos - The Aptos instance to interact with the blockchain.
+   * @param {Aptos} aptos - The Aptos instance to interact with the blockchain.
    * @param {`0x${string}`} contractAddress - The address of the Echelon contract.
    */
-  constructor(aptos: Aptos | RESTClient, contractAddress: `0x${string}`) {
+  constructor(aptos: Aptos, contractAddress: `0x${string}`) {
     this.aptos = aptos;
     this.surfClient = createSurfClient(this.aptos);
     this.address = contractAddress;
