@@ -17,6 +17,20 @@ export async function GET(req) {
     try {
         const { searchParams } = new URL(req.url);
         const address = searchParams.get("address");
+        
+        // 🔍 Логируем заголовки запроса для определения источника
+        console.log("🌐 Request headers:");
+        console.log("  - User-Agent:", req.headers.get('user-agent') || "NOT SET");
+        console.log("  - Origin:", req.headers.get('origin') || "NOT SET");
+        console.log("  - Referer:", req.headers.get('referer') || "NOT SET");
+        console.log("  - Host:", req.headers.get('host') || "NOT SET");
+        
+        // 🔍 Логируем переменные окружения для отладки
+        console.log("🔧 Environment variables check:");
+        console.log("  - APTOS_API_KEY:", process.env.APTOS_API_KEY ? `${process.env.APTOS_API_KEY.substring(0, 8)}...` : "NOT SET");
+        console.log("  - NEXT_PUBLIC_API_URL:", process.env.NEXT_PUBLIC_API_URL || "NOT SET");
+        console.log("  - NODE_ENV:", process.env.NODE_ENV || "NOT SET");
+        
         const aptosConfig = new AptosConfig({ 
             network: Network.MAINNET,
             fullnode: 'https://fullnode.mainnet.aptoslabs.com/v1',
@@ -41,19 +55,37 @@ export async function GET(req) {
         
         // Получаем кэшированные данные о рынках (включая APR)
         console.log(`📡 Fetching markets data from cache...`);
-        const marketsResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/echelon/markets`);
+        const marketsUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/echelon/markets`;
+        console.log(`🔗 Markets URL: ${marketsUrl}`);
+        const marketsResponse = await fetch(marketsUrl);
         let marketsData = [];
         
+        console.log(`📡 Markets response status: ${marketsResponse.status}`);
         if (marketsResponse.ok) {
             const marketsResult = await marketsResponse.json();
+            console.log(`📡 Markets response data:`, marketsResult);
             if (marketsResult.success && Array.isArray(marketsResult.marketData)) {
                 marketsData = marketsResult.marketData;
                 console.log(`✅ Got ${marketsData.length} markets from cache`);
+            } else {
+                console.log(`❌ Markets response format error:`, marketsResult);
             }
+        } else {
+            console.log(`❌ Markets fetch failed with status: ${marketsResponse.status}`);
+            const errorText = await marketsResponse.text();
+            console.log(`❌ Error response:`, errorText);
         }
         
         if (marketsData.length === 0) {
-            return new Response(JSON.stringify({ error: "No markets data available" }), {
+            console.log(`❌ No markets data available, returning error`);
+            return new Response(JSON.stringify({ 
+                error: "No markets data available",
+                debug: {
+                    nextPublicApiUrl: process.env.NEXT_PUBLIC_API_KEY ? "SET" : "NOT SET",
+                    aptosApiKey: process.env.APTOS_API_KEY ? "SET" : "NOT SET",
+                    marketsResponseStatus: marketsResponse.status
+                }
+            }), {
                 status: 500,
                 headers: { 
                     "Content-Type": "application/json",
@@ -68,7 +100,6 @@ export async function GET(req) {
         const userPositions = [];
         const errors = [];
         let processedMarkets = 0;
-        let skippedMarkets = 0;
         
         for (let i = 0; i < marketsData.length; i++) {
             const market = marketsData[i];
@@ -84,13 +115,6 @@ export async function GET(req) {
                 const supplyApr = market.supplyAPR || 0;
                 const borrowApr = market.borrowAPR || 0;
                 const coin = market.coin;
-                
-                // Пропускаем неактивные рынки (где оба APR = 0)
-                if (supplyApr === 0 && borrowApr === 0) {
-                    console.log(`⏭️ Skipping inactive market ${market.market} (supplyAPR: ${supplyApr}, borrowAPR: ${borrowApr})`);
-                    skippedMarkets++;
-                    continue;
-                }
                 
                 const supply = await echelonClient.getAccountSupply(address, market.market);
                 
@@ -134,7 +158,6 @@ export async function GET(req) {
         }
 
         console.log(`✅ Successfully processed ${processedMarkets}/${marketsData.length} markets`);
-        console.log(`⏭️ Skipped ${skippedMarkets} inactive markets`);
         console.log(`📊 Found ${userPositions.length} positions for address ${address}`);
         
         if (errors.length > 0) {
@@ -147,7 +170,6 @@ export async function GET(req) {
             summary: {
                 totalMarkets: marketsData.length,
                 processedMarkets,
-                skippedMarkets,
                 failedMarkets: errors.length,
                 totalPositions: userPositions.length,
                 incomplete: errors.length > 0

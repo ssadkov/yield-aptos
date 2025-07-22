@@ -28,7 +28,7 @@ let cacheData = null;
 let cacheTimestamp = 0;
 const CACHE_DURATION = 600000; // 10 минут в миллисекундах
 
-export async function GET() {
+export async function GET(req) {
   const startTime = Date.now();
   const cacheKey = `echelon-markets-${Math.floor(Date.now() / (600 * 1000))}`; // Ключ кэша на 10 минут
   const isDev = process.env.NODE_ENV === 'development';
@@ -36,6 +36,18 @@ export async function GET() {
   console.log(`🔄 [${new Date().toISOString()}] Echelon Markets API called`);
   console.log(`📦 Cache key: ${cacheKey}`);
   console.log(`🔧 Environment: ${process.env.NODE_ENV}`);
+  
+  // 🔍 Логируем заголовки запроса для определения источника
+  console.log("🌐 Request headers:");
+  console.log("  - User-Agent:", req.headers.get('user-agent') || "NOT SET");
+  console.log("  - Origin:", req.headers.get('origin') || "NOT SET");
+  console.log("  - Referer:", req.headers.get('referer') || "NOT SET");
+  console.log("  - Host:", req.headers.get('host') || "NOT SET");
+  
+  // 🔍 Логируем переменные окружения для отладки
+  console.log("🔧 Environment variables check:");
+  console.log("  - APTOS_API_KEY:", process.env.APTOS_API_KEY ? `${process.env.APTOS_API_KEY.substring(0, 8)}...` : "NOT SET");
+  console.log("  - ECHELON_CONTRACT_ADDRESS:", process.env.ECHELON_CONTRACT_ADDRESS || "NOT SET");
   
   // Проверяем кэш в dev режиме
   if (isDev && cacheData && (Date.now() - cacheTimestamp) < CACHE_DURATION) {
